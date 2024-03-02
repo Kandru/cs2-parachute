@@ -5,6 +5,8 @@ using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using System.Text.Json.Serialization;
+using CounterStrikeSharp.API.Modules.Utils;
+using Microsoft.VisualBasic.CompilerServices;
 
 namespace Parachute;
 
@@ -17,6 +19,7 @@ public class ConfigGen : BasePluginConfig
     [JsonPropertyName("ParachuteModelEnabled")] public bool ParachuteModelEnabled { get; set; } = false;
     [JsonPropertyName("ParachuteModel")] public string ParachuteModel { get; set; } = "models/props_survival/parachute/chute.vmdl";
     [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0075f;
+    [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
 }
 
 [MinimumApiVersion(139)]
@@ -33,6 +36,7 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
     private readonly Dictionary<int?, bool> bUsingPara = new();
     private readonly Dictionary<int?, int> gParaTicks = new();
     private readonly Dictionary<int?, CBaseEntity?> gParaModel = new();
+    private bool bParaAllowed;
 
     public override void Load(bool hotReload)
     {
@@ -50,15 +54,18 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
                 gParaTicks.Add(player.UserId, 0);
                 gParaModel.Add(player.UserId, null);
             });
+            
+            bParaAllowed = true;
+            Server.PrintToChatAll(ChatColors.Orange + "[Parachute] " + ChatColors.Default + "Parachute is now ready to go!");
         }
-
-        if (Config.ParachuteModelEnabled)
+        
+        RegisterListener<Listeners.OnMapStart>(map =>
         {
-            RegisterListener<Listeners.OnMapStart>(map =>
+            if (Config.ParachuteModelEnabled)
             {
                 Server.PrecacheModel(Config.ParachuteModel);
-            });
-        }
+            }
+        });
 
         RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
         {
@@ -108,6 +115,8 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 
         RegisterListener<Listeners.OnTick>(() =>
         {
+            if (!bParaAllowed) return;
+            
             var players = Utilities.GetPlayers();
 
             foreach (var player in players)
@@ -145,6 +154,20 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
             return HookResult.Continue;
         }, HookMode.Pre);
 
+        RegisterEventHandler<EventRoundStart>((@event, info) =>
+        {
+            bParaAllowed = false;
+            
+            Server.PrintToChatAll(ChatColors.Orange + "[Parachute] " + ChatColors.Default + "Parachute available in " + Config.RoundStartDelay + " seconds!");
+            AddTimer(Config.RoundStartDelay, () =>
+            {
+                bParaAllowed = true;
+                Server.PrintToChatAll(ChatColors.Orange + "[Parachute] " + ChatColors.Default + "Parachute is now ready to go. Press 'E' while in the air to use!");
+                Utilities.GetPlayers().ForEach(player => player.PrintToCenter("Parachute ready to go!"));
+            });
+            
+            return HookResult.Continue;
+        }, HookMode.Pre);
     }
 
     private void StopPara(CCSPlayerController player)

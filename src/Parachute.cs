@@ -57,7 +57,7 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
             });
             
             bParaAllowed = true;
-            Server.PrintToChatAll(ChatColors.Orange + "[Parachute] " + ChatColors.Default + "Parachute is now ready to go!");
+            PrintToChatAll("Parachute is ready to go. Press 'E' while in the air to use!");
         }
         
         RegisterListener<Listeners.OnMapStart>(map =>
@@ -159,11 +159,11 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
         {
             bParaAllowed = false;
             
-            Server.PrintToChatAll(ChatColors.Orange + "[Parachute] " + ChatColors.Default + "Parachute available in " + Config.RoundStartDelay + " seconds!");
+            PrintToChatAll("Parachute will be available in " + Config.RoundStartDelay + " seconds!");
             AddTimer(Config.RoundStartDelay, () =>
             {
                 bParaAllowed = true;
-                Server.PrintToChatAll(ChatColors.Orange + "[Parachute] " + ChatColors.Default + "Parachute is now ready to go. Press 'E' while in the air to use!");
+                PrintToChatAll("Parachute is ready to go. Press 'E' while in the air to use!");
                 Utilities.GetPlayers().ForEach(player => player.PrintToCenter("Parachute ready to go!"));
             });
             
@@ -231,6 +231,11 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 
             ++gParaTicks[player.UserId];
         }
+    }
+
+    private void PrintToChatAll(string msg)
+    {
+        Server.PrintToChatAll($" {ChatColors.Orange}[Parachute] {ChatColors.Default}{msg}");
     }
 }
 

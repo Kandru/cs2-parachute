@@ -1,2 +1,5 @@
 obj
 .vs
+src/bin/
+src/.idea/
+src/Folder.DotSettings.user

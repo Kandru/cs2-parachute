@@ -11,13 +11,12 @@ namespace Parachute;
 public class ConfigGen : BasePluginConfig
 {
     [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
-    [JsonPropertyName("DecreaseVec")] public float DecreaseVec { get; set; } = 50;
-    [JsonPropertyName("Linear")] public bool Linear { get; set; } = true;
-    [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 100;
+    [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 32;
     [JsonPropertyName("AccessFlag")] public string AccessFlag { get; set; } = "";
     [JsonPropertyName("TeleportTicks")] public int TeleportTicks { get; set; } = 300;
     [JsonPropertyName("ParachuteModelEnabled")] public bool ParachuteModelEnabled { get; set; } = false;
     [JsonPropertyName("ParachuteModel")] public string ParachuteModel { get; set; } = "models/props_survival/parachute/chute.vmdl";
+    [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0075f;
 }
 
 [MinimumApiVersion(139)]
@@ -25,7 +24,7 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 {
     public override string ModuleName => "CS2 Parachute";
     public override string ModuleAuthor => "Franc1sco Franug";
-    public override string ModuleVersion => "1.4";
+    public override string ModuleVersion => "1.4-kandru";
 
 
     public ConfigGen Config { get; set; } = null!;
@@ -181,25 +180,16 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
             }
         }
 
-        var fallspeed = Config.FallSpeed * (-1.0f);
-        var isFallSpeed = false;
         var velocity = player.PlayerPawn.Value.AbsVelocity;
-        if (velocity.Z >= fallspeed)
-        {
-            isFallSpeed = true;
-        }
 
         if (velocity.Z < 0.0f)
         {
-            if (isFallSpeed && Config.Linear || Config.DecreaseVec == 0.0)
+            if ((player.Buttons & PlayerButtons.Moveleft) != 0 || (player.Buttons & PlayerButtons.Moveright) != 0)
             {
-                velocity.Z = fallspeed;
-
+                velocity.X *= Config.SideMovementModifier;
+                velocity.Y *= Config.SideMovementModifier;
             }
-            else
-            {
-                velocity.Z = velocity.Z + Config.DecreaseVec;
-            }
+            velocity.Z =  Config.FallSpeed * (-1.0f);
 
             var position = player.PlayerPawn.Value.AbsOrigin!;
             var angle = player.PlayerPawn.Value.AbsRotation!;

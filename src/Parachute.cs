@@ -19,6 +19,7 @@ public class ConfigGen : BasePluginConfig
     [JsonPropertyName("ParachuteModel")] public string ParachuteModel { get; set; } = "models/props_survival/parachute/chute.vmdl";
     [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0075f;
     [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
+    [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = false;
 }
 
 [MinimumApiVersion(179)]
@@ -129,7 +130,8 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
                 && (Config.AccessFlag == "" || AdminManager.PlayerHasPermissions(player, Config.AccessFlag)))
                 {
                     var buttons = player.Buttons;
-                    if ((buttons & PlayerButtons.Use) != 0 && !player.PlayerPawn.Value!.OnGroundLastTick)
+                    var pawn = player.PlayerPawn.Value!;
+                    if ((buttons & PlayerButtons.Use) != 0 && !pawn.OnGroundLastTick && (!Config.DisableWhenCarryingHostage || pawn.HostageServices!.CarriedHostageProp.Value == null))
                     {
                         StartPara(player);
 

@@ -3,3 +3,4 @@ obj
 src/bin/
 src/.idea/
 src/Folder.DotSettings.user
+*.sln

@@ -23,6 +23,8 @@ public class ConfigGen : BasePluginConfig
 [MinimumApiVersion(179)]
 public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 {
+    private const int MAX_PLAYERS = 256;
+    
     public override string ModuleName => "CS2 Parachute";
     public override string ModuleAuthor => "Franc1sco Franug";
     public override string ModuleVersion => "1.5.2";
@@ -31,9 +33,9 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
     public ConfigGen Config { get; set; } = null!;
     public void OnConfigParsed(ConfigGen config) { Config = config; }
 
-    private readonly Dictionary<int, bool> bUsingPara = new();
-    private readonly Dictionary<int, int> gParaTicks = new();
-    private readonly Dictionary<int, CBaseEntity?> gParaModel = new();
+    private bool[] bUsingPara = new bool[MAX_PLAYERS];
+    private int[] gParaTicks = new int[MAX_PLAYERS];
+    private CBaseEntity?[] gParaModel = new CBaseEntity?[MAX_PLAYERS];
 
     public override void Load(bool hotReload)
     {
@@ -43,68 +45,20 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
             return;
         }
 
-        if (hotReload)
-        {
-            Utilities.GetPlayers().ForEach(player =>
-            {
-                bUsingPara.Add((int)player.Index, false);
-                gParaTicks.Add((int)player.Index, 0);
-                gParaModel.Add((int)player.Index, null);
-            });
-        }
-
         if (Config.ParachuteModelEnabled)
         {
             RegisterListener<Listeners.OnServerPrecacheResources>((manifest) =>
             {
                  manifest.AddResource(Config.ParachuteModel);
-
             });
         }
 
-        RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
+        RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
             var player = @event.Userid;
+            if (bUsingPara[(int)player.Index]) StopPara(player);
 
-            if (player.IsBot || !player.IsValid)
-            {
-                return HookResult.Continue;
-
-            }
-            else
-            {
-                bUsingPara.Add((int)player.Index, false);
-                gParaTicks.Add((int)player.Index, 0);
-                gParaModel.Add((int)player.Index, null);
-                return HookResult.Continue;
-            }
-        });
-
-        RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
-        {
-            var player = @event.Userid;
-
-            if (player == null || player.IsBot || !player.IsValid)
-            {
-                return HookResult.Continue;
-
-            }
-            else
-            {
-                if (bUsingPara.ContainsKey((int)player.Index))
-                {
-                    bUsingPara.Remove((int)player.Index);
-                }
-                if (gParaTicks.ContainsKey((int)player.Index))
-                {
-                    gParaTicks.Remove((int)player.Index);
-                }
-                if (gParaModel.ContainsKey((int)player.Index))
-                {
-                    gParaModel.Remove((int)player.Index);
-                }
-                return HookResult.Continue;
-            }
+            return HookResult.Continue;
         });
 
 
@@ -114,37 +68,27 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 
             foreach (var player in players)
             {
-                if (player != null
-                && player.IsValid
-                && !player.IsBot
-                && player.PawnIsAlive
-                && (Config.AccessFlag == "" || AdminManager.PlayerHasPermissions(player, Config.AccessFlag)))
-                {
-                    var buttons = player.Buttons;
-                    var pawn = player.PlayerPawn.Value!;
-                    if ((buttons & PlayerButtons.Use) != 0 && !pawn.OnGroundLastTick && (!Config.DisableWhenCarryingHostage || pawn.HostageServices!.CarriedHostageProp.Value == null))
-                    {
-                        StartPara(player);
-
-                    } 
-                    else if (bUsingPara[(int)player.Index])
-                    {
-                        bUsingPara[(int)player.Index] = false;
-                        StopPara(player);
-                    }
-                }
+                if (player == null || !player.IsValid || !player.PawnIsAlive) continue;
+                if (Config.AccessFlag != "" &&
+                    !AdminManager.PlayerHasPermissions(player, Config.AccessFlag)) continue;
+                
+                var buttons = player.Buttons;
+                var pawn = player.Pawn.Value!;
+                var playerPawn = player.PlayerPawn.Value!;
+                if ((buttons & PlayerButtons.Use) != 0 && pawn.GroundEntity.Value == null &&
+                    (!Config.DisableWhenCarryingHostage || playerPawn.HostageServices!.CarriedHostageProp.Value == null))
+                    StartPara(player);
+                else if (bUsingPara[(int)player.Index])
+                    StopPara(player);
             }
         });
 
         RegisterEventHandler<EventPlayerDeath>((@event, info) =>
         {
             var player = @event.Userid;
-
-            if (bUsingPara.ContainsKey((int)player.Index) && bUsingPara[(int)player.Index])
-            {
-                bUsingPara[(int)player.Index] = false;
+            if (bUsingPara[(int)player.Index])
                 StopPara(player);
-            }
+
             return HookResult.Continue;
         });
 
@@ -152,8 +96,11 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 
     private void StopPara(CCSPlayerController player)
     {
-        player.GravityScale = 1.0f;
-        gParaTicks[(int)player.Index] = 0;
+        var pawn = player.Pawn.Value!;
+        
+        bUsingPara[(int)player.Index] = false;
+        pawn.GravityScale = 1.0f;
+        
         if (gParaModel[(int)player.Index] != null && gParaModel[(int)player.Index]!.IsValid)
         {
             gParaModel[(int)player.Index]?.Remove();
@@ -163,10 +110,13 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 
     private void StartPara(CCSPlayerController player)
     {
+        var pawn = player.Pawn.Value!;
+        
         if (!bUsingPara[(int)player.Index])
         {
             bUsingPara[(int)player.Index] = true;
-            player.GravityScale = 0.1f;
+            gParaTicks[(int)player.Index] = 0;
+            pawn.GravityScale = 0.1f;
             if (Config.ParachuteModelEnabled)
             {
                 var entity = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic_override");
@@ -192,7 +142,7 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 
         var fallspeed = Config.FallSpeed * (-1.0f);
         var isFallSpeed = false;
-        var velocity = player.PlayerPawn.Value?.AbsVelocity;
+        var velocity = pawn.AbsVelocity;
         if (velocity?.Z >= fallspeed)
         {
             isFallSpeed = true;
@@ -210,12 +160,12 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
                 velocity.Z = velocity.Z + Config.DecreaseVec;
             }
 
-            var position = player.PlayerPawn.Value?.AbsOrigin!;
-            var angle = player.PlayerPawn.Value?.AbsRotation!;
+            var position = pawn.AbsOrigin!;
+            var angle = pawn.AbsRotation!;
 
             if (gParaTicks[(int)player.Index] > Config.TeleportTicks)
             {
-                player.Teleport(position, angle, velocity);
+                pawn.Teleport(position, angle, velocity);
                 gParaTicks[(int)player.Index] = 0;
             }
 

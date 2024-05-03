@@ -18,6 +18,7 @@ public class ConfigGen : BasePluginConfig
     [JsonPropertyName("ParachuteModelEnabled")] public bool ParachuteModelEnabled { get; set; } = true;
     [JsonPropertyName("ParachuteModel")] public string ParachuteModel { get; set; } = "models/props_survival/parachute/chute.vmdl";
     [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = false;
+    [JsonPropertyName("DisableForBots")] public bool DisableForBots { get; set; } = false;
 }
 
 [MinimumApiVersion(179)]
@@ -69,6 +70,7 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
             foreach (var player in players)
             {
                 if (player == null || !player.IsValid || !player.PawnIsAlive) continue;
+                if (Config.DisableForBots && player.IsBot) continue;
                 if (Config.AccessFlag != "" &&
                     !AdminManager.PlayerHasPermissions(player, Config.AccessFlag)) continue;
                 

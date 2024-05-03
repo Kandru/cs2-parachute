@@ -127,7 +127,6 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
         var pawn = player.Pawn.Value!;
         
         bUsingPara[(int)player.Index] = false;
-        pawn.GravityScale = 1.0f;
         
         if (gParaModel[(int)player.Index] != null && gParaModel[(int)player.Index]!.IsValid)
         {
@@ -144,7 +143,6 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
         {
             bUsingPara[(int)player.Index] = true;
             gParaTicks[(int)player.Index] = 0;
-            pawn.GravityScale = 0.1f;
             if (Config.ParachuteModelEnabled)
             {
                 var entity = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic_override");
@@ -170,7 +168,7 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 
         var velocity = pawn.AbsVelocity;
 
-        if (velocity?.Z < 0.0f)
+        if (velocity.Z < 0.0f)
         {
             if ((player.Buttons & PlayerButtons.Moveleft) != 0 || (player.Buttons & PlayerButtons.Moveright) != 0)
             {

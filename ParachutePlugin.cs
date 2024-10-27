@@ -105,7 +105,7 @@ public class ParachutePlugin : BasePlugin, IPluginConfig<ConfigGen>
             return HookResult.Continue;
         });
 
-        RegisterEventHandler<EventRoundStart>((@event, info) =>
+        RegisterEventHandler<EventCsRoundFinalBeep>((@event, info) =>
         {
             bParaAllowed = false;
             

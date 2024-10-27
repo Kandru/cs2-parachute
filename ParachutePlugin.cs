@@ -5,9 +5,8 @@ using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using System.Text.Json.Serialization;
 using CounterStrikeSharp.API.Modules.Utils;
-using Microsoft.VisualBasic.CompilerServices;
 
-namespace Parachute;
+namespace ParachutePlugin;
 
 public class ConfigGen : BasePluginConfig
 {
@@ -24,7 +23,7 @@ public class ConfigGen : BasePluginConfig
 }
 
 [MinimumApiVersion(179)]
-public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
+public class ParachutePlugin : BasePlugin, IPluginConfig<ConfigGen>
 {
     private const int MAX_PLAYERS = 256;
     

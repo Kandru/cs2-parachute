@@ -1,3 +1,4 @@
+using System.Globalization;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes;
@@ -29,7 +30,7 @@ public class ParachutePlugin : BasePlugin, IPluginConfig<ConfigGen>
     
     public override string ModuleName => "CS2 Parachute";
     public override string ModuleAuthor => "Franc1sco Franug";
-    public override string ModuleVersion => "1.5.2-kandru";
+    public override string ModuleVersion => "1.5.3-kandru";
 
 
     public ConfigGen Config { get; set; } = null!;
@@ -52,7 +53,7 @@ public class ParachutePlugin : BasePlugin, IPluginConfig<ConfigGen>
         if (hotReload)
         {          
             bParaAllowed = true;
-            PrintToChatAll("Parachute is ready to go. Press 'E' while in the air to use!");
+            Server.PrintToChatAll(Localizer["parachute.readyChat"]);
         }
 
         RegisterListener<Listeners.OnMapStart>(map =>
@@ -109,12 +110,12 @@ public class ParachutePlugin : BasePlugin, IPluginConfig<ConfigGen>
         {
             bParaAllowed = false;
             
-            PrintToChatAll("Parachute will be available in " + Config.RoundStartDelay + " seconds!");
+            Server.PrintToChatAll(Localizer["parachute.delay"].Value.Replace("{seconds}", Config.RoundStartDelay.ToString(CultureInfo.CurrentCulture)));
             AddTimer(Config.RoundStartDelay, () =>
             {
                 bParaAllowed = true;
-                PrintToChatAll("Parachute is ready to go. Press 'E' while in the air to use!");
-                Utilities.GetPlayers().ForEach(player => player.PrintToCenter("Parachute ready to go!"));
+                Server.PrintToChatAll(Localizer["parachute.readyChat"]);
+                Utilities.GetPlayers().ForEach(player => player.PrintToCenter(Localizer["parachute.readyCenter"]));
             });
             
             return HookResult.Continue;
@@ -212,10 +213,5 @@ public class ParachutePlugin : BasePlugin, IPluginConfig<ConfigGen>
         childrenEntity.Teleport(origin, angle, new Vector(IntPtr.Zero));
         Console.WriteLine("CBaseEntity_SetParent() done!");
     }*/
-
-    private void PrintToChatAll(string msg)
-    {
-        Server.PrintToChatAll($" {ChatColors.Orange}[Parachute] {ChatColors.Default}{msg}");
-    }
 }
 

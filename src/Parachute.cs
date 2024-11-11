@@ -1,157 +1,139 @@
-﻿using CounterStrikeSharp.API;
+using System.Globalization;
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using System.Text.Json.Serialization;
+using CounterStrikeSharp.API.Modules.Utils;
 
 namespace Parachute;
 
 public class ConfigGen : BasePluginConfig
 {
     [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
-    [JsonPropertyName("DecreaseVec")] public float DecreaseVec { get; set; } = 50;
-    [JsonPropertyName("Linear")] public bool Linear { get; set; } = true;
-    [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 100;
+    [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 32;
     [JsonPropertyName("AccessFlag")] public string AccessFlag { get; set; } = "";
     [JsonPropertyName("TeleportTicks")] public int TeleportTicks { get; set; } = 300;
     [JsonPropertyName("ParachuteModelEnabled")] public bool ParachuteModelEnabled { get; set; } = true;
     [JsonPropertyName("ParachuteModel")] public string ParachuteModel { get; set; } = "models/props_survival/parachute/chute.vmdl";
+    [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0075f;
+    [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
+    [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = false;
+    [JsonPropertyName("DisableForBots")] public bool DisableForBots { get; set; } = false;
 }
 
 [MinimumApiVersion(179)]
 public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 {
+    private const int MAX_PLAYERS = 256;
+    
     public override string ModuleName => "CS2 Parachute";
-    public override string ModuleAuthor => "Franc1sco Franug";
-    public override string ModuleVersion => "1.5.2";
+    public override string ModuleAuthor => "Franc1sco Franug / additions by Jon-Mailes Graeffe <mail@jonni.it> and Kalle <kalle@kandru.de>";
+    public override string ModuleVersion => "1.6.0";
 
 
     public ConfigGen Config { get; set; } = null!;
     public void OnConfigParsed(ConfigGen config) { Config = config; }
 
-    private readonly Dictionary<int, bool> bUsingPara = new();
-    private readonly Dictionary<int, int> gParaTicks = new();
-    private readonly Dictionary<int, CBaseEntity?> gParaModel = new();
+    private bool[] bUsingPara = new bool[MAX_PLAYERS];
+    private int[] gParaTicks = new int[MAX_PLAYERS];
+    private CBaseEntity?[] gParaModel = new CBaseEntity?[MAX_PLAYERS];
+
+    private bool bParaAllowed;
 
     public override void Load(bool hotReload)
     {
+        Console.WriteLine(Localizer["parachute.loaded"]);
         if (!Config.Enabled)
         {
-            Console.WriteLine("[Parachute] Plugin not enabled!");
+            Console.WriteLine(Localizer["parachute.disabled"]);
             return;
         }
 
         if (hotReload)
-        {
-            Utilities.GetPlayers().ForEach(player =>
-            {
-                bUsingPara.Add((int)player.Index, false);
-                gParaTicks.Add((int)player.Index, 0);
-                gParaModel.Add((int)player.Index, null);
-            });
+        {          
+            bParaAllowed = true;
+            Server.PrintToChatAll(Localizer["parachute.readyChat"]);
         }
 
-        if (Config.ParachuteModelEnabled)
+        RegisterListener<Listeners.OnMapStart>(map =>
         {
             RegisterListener<Listeners.OnServerPrecacheResources>((manifest) =>
             {
                  manifest.AddResource(Config.ParachuteModel);
-
             });
-        }
-
-        RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
-        {
-            var player = @event.Userid;
-
-            if (player.IsBot || !player.IsValid)
-            {
-                return HookResult.Continue;
-
-            }
-            else
-            {
-                bUsingPara.Add((int)player.Index, false);
-                gParaTicks.Add((int)player.Index, 0);
-                gParaModel.Add((int)player.Index, null);
-                return HookResult.Continue;
-            }
         });
 
-        RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
+        RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
             var player = @event.Userid;
+            if (bUsingPara[(int)player.Index]) StopPara(player);
 
-            if (player == null || player.IsBot || !player.IsValid)
-            {
-                return HookResult.Continue;
-
-            }
-            else
-            {
-                if (bUsingPara.ContainsKey((int)player.Index))
-                {
-                    bUsingPara.Remove((int)player.Index);
-                }
-                if (gParaTicks.ContainsKey((int)player.Index))
-                {
-                    gParaTicks.Remove((int)player.Index);
-                }
-                if (gParaModel.ContainsKey((int)player.Index))
-                {
-                    gParaModel.Remove((int)player.Index);
-                }
-                return HookResult.Continue;
-            }
+            return HookResult.Continue;
         });
 
 
         RegisterListener<Listeners.OnTick>(() =>
         {
+            if (!bParaAllowed) return;
+            
             var players = Utilities.GetPlayers();
 
             foreach (var player in players)
             {
-                if (player != null
-                && player.IsValid
-                && !player.IsBot
-                && player.PawnIsAlive
-                && (Config.AccessFlag == "" || AdminManager.PlayerHasPermissions(player, Config.AccessFlag)))
-                {
-                    var buttons = player.Buttons;
-                    if ((buttons & PlayerButtons.Use) != 0 && !player.PlayerPawn.Value!.OnGroundLastTick)
-                    {
-                        StartPara(player);
-
-                    } 
-                    else if (bUsingPara[(int)player.Index])
-                    {
-                        bUsingPara[(int)player.Index] = false;
-                        StopPara(player);
-                    }
-                }
+                if (player == null || !player.IsValid || !player.PawnIsAlive) continue;
+                if (Config.DisableForBots && player.IsBot) continue;
+                if (Config.AccessFlag != "" &&
+                    !AdminManager.PlayerHasPermissions(player, Config.AccessFlag)) continue;
+                
+                var buttons = player.Buttons;
+                var pawn = player.Pawn.Value!;
+                var playerPawn = player.PlayerPawn.Value!;
+                if ((buttons & PlayerButtons.Use) != 0 && pawn.GroundEntity.Value == null &&
+                    (!Config.DisableWhenCarryingHostage || playerPawn.HostageServices!.CarriedHostageProp.Value == null))
+                    StartPara(player);
+                else if (bUsingPara[(int)player.Index])
+                    StopPara(player);
             }
         });
 
         RegisterEventHandler<EventPlayerDeath>((@event, info) =>
         {
             var player = @event.Userid;
-
-            if (bUsingPara.ContainsKey((int)player.Index) && bUsingPara[(int)player.Index])
-            {
-                bUsingPara[(int)player.Index] = false;
+            if (bUsingPara[(int)player.Index])
                 StopPara(player);
-            }
+
             return HookResult.Continue;
         });
 
+        RegisterEventHandler<EventCsRoundFinalBeep>((@event, info) =>
+        {
+            bParaAllowed = false;
+            
+            Server.PrintToChatAll(Localizer["parachute.delay"].Value.Replace("{seconds}", Config.RoundStartDelay.ToString(CultureInfo.CurrentCulture)));
+            AddTimer(Config.RoundStartDelay, () =>
+            {
+                bParaAllowed = true;
+                Server.PrintToChatAll(Localizer["parachute.readyChat"]);
+                Utilities.GetPlayers().ForEach(player => player.PrintToCenter(Localizer["parachute.readyCenter"]));
+            });
+            
+            return HookResult.Continue;
+        }, HookMode.Pre);
+    }
+
+    public override void Unload(bool hotReload)
+    {
+        Console.WriteLine(Localizer["parachute.unloaded"]);
     }
 
     private void StopPara(CCSPlayerController player)
     {
-        player.GravityScale = 1.0f;
-        gParaTicks[(int)player.Index] = 0;
+        var pawn = player.Pawn.Value!;
+        
+        bUsingPara[(int)player.Index] = false;
+        
         if (gParaModel[(int)player.Index] != null && gParaModel[(int)player.Index]!.IsValid)
         {
             gParaModel[(int)player.Index]?.Remove();
@@ -161,10 +143,12 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 
     private void StartPara(CCSPlayerController player)
     {
+        var pawn = player.Pawn.Value!;
+        
         if (!bUsingPara[(int)player.Index])
         {
             bUsingPara[(int)player.Index] = true;
-            player.GravityScale = 0.1f;
+            gParaTicks[(int)player.Index] = 0;
             if (Config.ParachuteModelEnabled)
             {
                 var entity = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic_override");
@@ -188,32 +172,23 @@ public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
             }
         }
 
-        var fallspeed = Config.FallSpeed * (-1.0f);
-        var isFallSpeed = false;
-        var velocity = player.PlayerPawn.Value?.AbsVelocity;
-        if (velocity?.Z >= fallspeed)
+        var velocity = pawn.AbsVelocity;
+
+        if (velocity.Z < 0.0f)
         {
-            isFallSpeed = true;
-        }
-
-        if (velocity?.Z < 0.0f)
-        {
-            if (isFallSpeed && Config.Linear || Config.DecreaseVec == 0.0)
+            if ((player.Buttons & PlayerButtons.Moveleft) != 0 || (player.Buttons & PlayerButtons.Moveright) != 0)
             {
-                velocity.Z = fallspeed;
-
+                velocity.X *= Config.SideMovementModifier;
+                velocity.Y *= Config.SideMovementModifier;
             }
-            else
-            {
-                velocity.Z = velocity.Z + Config.DecreaseVec;
-            }
+            velocity.Z =  Config.FallSpeed * (-1.0f);
 
-            var position = player.PlayerPawn.Value?.AbsOrigin!;
-            var angle = player.PlayerPawn.Value?.AbsRotation!;
+            var position = pawn.AbsOrigin!;
+            var angle = pawn.AbsRotation!;
 
             if (gParaTicks[(int)player.Index] > Config.TeleportTicks)
             {
-                player.Teleport(position, angle, velocity);
+                pawn.Teleport(position, angle, velocity);
                 gParaTicks[(int)player.Index] = 0;
             }
 

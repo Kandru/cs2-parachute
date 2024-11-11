@@ -24,14 +24,12 @@ public class ConfigGen : BasePluginConfig
 }
 
 [MinimumApiVersion(179)]
-public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
+public partial class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 {
     private const int MAX_PLAYERS = 256;
     
     public override string ModuleName => "CS2 Parachute";
     public override string ModuleAuthor => "Franc1sco Franug / additions by Jon-Mailes Graeffe <mail@jonni.it> and Kalle <kalle@kandru.de>";
-    public override string ModuleVersion => "1.6.0";
-
 
     public ConfigGen Config { get; set; } = null!;
     public void OnConfigParsed(ConfigGen config) { Config = config; }

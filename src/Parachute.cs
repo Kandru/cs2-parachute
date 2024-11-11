@@ -10,6 +10,7 @@ namespace Parachute
     {
         [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
         [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 32;
+        [JsonPropertyName("TeleportTicks")] public int TeleportTicks { get; set; } = 300;
         [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0075f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = false;
@@ -72,6 +73,7 @@ namespace Parachute
         {
             if (_parachutePlayers.ContainsKey(player)) return;
             _parachutePlayers.Add(player, new Dictionary<string, string>());
+            _parachutePlayers[player]["ticks"] = "0";
             _parachutePlayers[player]["prop"] = SpawnProp(
                 player,
                 "models/props_survival/parachute/chute.vmdl",
@@ -148,6 +150,15 @@ namespace Parachute
                             velocity.Y *= Config.SideMovementModifier;
                         }
                         velocity.Z = Config.FallSpeed * (-1.0f);
+                        if (int.Parse(_parachutePlayers[player]["ticks"]) > Config.TeleportTicks)
+                        {
+                            player.Teleport(player.Pawn.Value.AbsOrigin, player.Pawn.Value.AbsRotation, velocity);
+                            _parachutePlayers[player]["ticks"] = "0";
+                        }
+                        else
+                        {
+                            _parachutePlayers[player]["ticks"] = (int.Parse(_parachutePlayers[player]["ticks"]) + 1).ToString();
+                        }
                         if (_parachutePlayers[player].ContainsKey("prop"))
                         {
                             // update prop every tick to ensure synchroneity

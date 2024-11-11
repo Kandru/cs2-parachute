@@ -75,8 +75,7 @@ namespace Parachute
             _parachutePlayers.Add(player, new Dictionary<string, string>());
             _parachutePlayers[player]["prop"] = SpawnProp(
                 player,
-                "models/props_survival/parachute/chute.vmdl",
-                ((float)Random.Shared.NextDouble() * 0.4f) + 0.8f
+                "models/props_survival/parachute/chute.vmdl"
             ).ToString();
         }
 

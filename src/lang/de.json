@@ -1,0 +1,8 @@
+{
+    "parachute.loaded": "Fallschirm-Plugin geladen!",
+    "parachute.unloaded": "Fallschirm-Plugin entladen!",
+    "parachute.disabled": "Fallschirm-Plugin deaktiviert!",
+    "parachute.delay": " {orange}[Fallschirm] {default}Der Fallschirm wird in {lime}{seconds}{default} Sekunden verfügbar sein!",
+    "parachute.readyChat": " {orange}[Fallschirm] {default}Der Fallschirm ist einsatzbereit. Drücke {lime}'E'{default} in der Luft!",
+    "parachute.readyCenter": "Fallschirm einsatzbereit!"
+}

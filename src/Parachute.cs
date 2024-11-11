@@ -7,7 +7,7 @@ using CounterStrikeSharp.API.Modules.Entities.Constants;
 using System.Text.Json.Serialization;
 using CounterStrikeSharp.API.Modules.Utils;
 
-namespace ParachutePlugin;
+namespace Parachute;
 
 public class ConfigGen : BasePluginConfig
 {
@@ -24,13 +24,13 @@ public class ConfigGen : BasePluginConfig
 }
 
 [MinimumApiVersion(179)]
-public class ParachutePlugin : BasePlugin, IPluginConfig<ConfigGen>
+public class Parachute : BasePlugin, IPluginConfig<ConfigGen>
 {
     private const int MAX_PLAYERS = 256;
     
     public override string ModuleName => "CS2 Parachute";
-    public override string ModuleAuthor => "Franc1sco Franug";
-    public override string ModuleVersion => "1.5.3-kandru";
+    public override string ModuleAuthor => "Franc1sco Franug / additions by Jon-Mailes Graeffe <mail@jonni.it> and Kalle <kalle@kandru.de>";
+    public override string ModuleVersion => "1.6.0";
 
 
     public ConfigGen Config { get; set; } = null!;
@@ -44,9 +44,10 @@ public class ParachutePlugin : BasePlugin, IPluginConfig<ConfigGen>
 
     public override void Load(bool hotReload)
     {
+        Console.WriteLine(Localizer["parachute.loaded"]);
         if (!Config.Enabled)
         {
-            Console.WriteLine("[Parachute] Plugin not enabled!");
+            Console.WriteLine(Localizer["parachute.disabled"]);
             return;
         }
 
@@ -120,6 +121,11 @@ public class ParachutePlugin : BasePlugin, IPluginConfig<ConfigGen>
             
             return HookResult.Continue;
         }, HookMode.Pre);
+    }
+
+    public override void Unload(bool hotReload)
+    {
+        Console.WriteLine(Localizer["parachute.unloaded"]);
     }
 
     private void StopPara(CCSPlayerController player)

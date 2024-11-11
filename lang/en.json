@@ -1,5 +1,0 @@
-{
-  "parachute.delay": " {orange}[Parachute] {default}Parachute will be available in {lime}{seconds}{default} seconds!",
-  "parachute.readyChat": " {orange}[Parachute] {default}Parachute is ready to go. Press {lime}'E'{default} while in the air to use!",
-  "parachute.readyCenter": "Parachute ready to go!"
-}

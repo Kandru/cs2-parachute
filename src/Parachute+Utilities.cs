@@ -31,11 +31,11 @@ namespace Parachute
             // set team color
             if (player.Team == CsTeam.Terrorist)
             {
-                prop.Render = Color.FromArgb(255, Random.Shared.Next(30, 256), 0, 0);
+                prop.Render = Color.FromArgb(255, Random.Shared.Next(100, 256), 0, 0);
             }
             else if (player.Team == CsTeam.CounterTerrorist)
             {
-                prop.Render = Color.FromArgb(255, 0, 0, Random.Shared.Next(30, 256));
+                prop.Render = Color.FromArgb(255, 0, 0, Random.Shared.Next(100, 256));
             }
             return (int)prop.Index;
         }

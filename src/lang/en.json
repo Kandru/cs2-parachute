@@ -1,7 +1,7 @@
 {
-    "parachute.loaded": "Parachute plugin loaded!",
-    "parachute.unloaded": "Parachute plugin unloaded!",
-    "parachute.disabled": "Parachute plugin disabled!",
+    "parachute.loaded": "[Parachute] plugin loaded!",
+    "parachute.unloaded": "[Parachute] plugin unloaded!",
+    "parachute.disabled": "[Parachute] plugin disabled!",
     "parachute.delay": " {orange}[Parachute] {default}Parachute will be available in {lime}{seconds}{default} seconds!",
     "parachute.readyChat": " {orange}[Parachute] {default}Parachute is ready to go. Press {lime}'E'{default} while in the air!",
     "parachute.readyCenter": "Parachute ready to go!"

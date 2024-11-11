@@ -11,7 +11,7 @@ namespace Parachute
         [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
         [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 32;
         [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0075f;
-        [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 300f;
+        [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 500f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = false;
         [JsonPropertyName("DisableForBots")] public bool DisableForBots { get; set; } = false;
@@ -147,8 +147,8 @@ namespace Parachute
                         {
                             velocity.X *= Config.SideMovementModifier;
                             velocity.Y *= Config.SideMovementModifier;
-                            if (velocity.X > 300f) velocity.X = Config.MaxVelocity;
-                            if (velocity.Y > 300f) velocity.Y = Config.MaxVelocity;
+                            if (velocity.X > Config.MaxVelocity) velocity.X = Config.MaxVelocity;
+                            if (velocity.Y > Config.MaxVelocity) velocity.Y = Config.MaxVelocity;
                         }
                         velocity.Z = Config.FallSpeed * (-1.0f);
                         if (_parachutePlayers[player].ContainsKey("prop"))

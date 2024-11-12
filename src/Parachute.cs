@@ -2,7 +2,6 @@ using System.Globalization;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using System.Text.Json.Serialization;
-using System.Drawing;
 
 namespace Parachute
 {
@@ -11,7 +10,7 @@ namespace Parachute
         [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
         [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 32;
         [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0075f;
-        [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 500f;
+        [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 400f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = false;
         [JsonPropertyName("DisableForBots")] public bool DisableForBots { get; set; } = false;

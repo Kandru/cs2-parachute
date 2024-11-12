@@ -147,7 +147,9 @@ namespace Parachute
                             velocity.X *= Config.SideMovementModifier;
                             velocity.Y *= Config.SideMovementModifier;
                             if (velocity.X > Config.MaxVelocity) velocity.X = Config.MaxVelocity;
+                            if (velocity.X < -Config.MaxVelocity) velocity.X = -Config.MaxVelocity;
                             if (velocity.Y > Config.MaxVelocity) velocity.Y = Config.MaxVelocity;
+                            if (velocity.Y < -Config.MaxVelocity) velocity.Y = -Config.MaxVelocity;
                         }
                         velocity.Z = Config.FallSpeed * (-1.0f);
                         if (_parachutePlayers[player].ContainsKey("prop"))

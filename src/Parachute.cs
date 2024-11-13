@@ -59,7 +59,8 @@ namespace Parachute
         {
             RegisterListener<Listeners.OnTick>(ListenerOnTick);
             RegisterListener<Listeners.OnServerPrecacheResources>(OnServerPrecacheResources);
-            RegisterEventHandler<EventRoundFreezeEnd>(EventOnRoundStart);
+            RegisterEventHandler<EventRoundStart>(EventOnRoundStart);
+            RegisterEventHandler<EventRoundFreezeEnd>(EventOnRoundFreezeEnd);
             RegisterEventHandler<EventPlayerDeath>(EventOnPlayerDeath);
             RegisterEventHandler<EventRoundEnd>(EventOnRoundEnd);
         }
@@ -244,7 +245,14 @@ namespace Parachute
             }
         }
 
-        private HookResult EventOnRoundStart(EventRoundFreezeEnd @event, GameEventInfo info)
+        private HookResult EventOnRoundStart(EventRoundStart @event, GameEventInfo info)
+        {
+            _enabled = false;
+            ResetParachutes();
+            return HookResult.Continue;
+        }
+
+        private HookResult EventOnRoundFreezeEnd(EventRoundFreezeEnd @event, GameEventInfo info)
         {
             _enabled = false;
             Server.PrintToChatAll(Localizer["parachute.delay"].Value.Replace("{seconds}", Config.RoundStartDelay.ToString(CultureInfo.CurrentCulture)));

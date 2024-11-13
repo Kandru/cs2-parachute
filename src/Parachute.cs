@@ -1,6 +1,7 @@
 using System.Globalization;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Utils;
 using System.Text.Json.Serialization;
 
 namespace Parachute
@@ -9,8 +10,9 @@ namespace Parachute
     {
         [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
         [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 32;
+        [JsonPropertyName("MovementModifier")] public float MovementModifier { get; set; } = 1.0075f;
         [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0075f;
-        [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 400f;
+        [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 500f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = false;
         [JsonPropertyName("DisableForBots")] public bool DisableForBots { get; set; } = false;
@@ -119,7 +121,8 @@ namespace Parachute
                 || player == null
                 || player.Pawn == null
                 || player.Pawn.Value == null
-                || player.PlayerPawn == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value == null
+                || ((player.PlayerPawn == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value == null)
+                    || (player.ObserverPawn == null || !player.ObserverPawn!.IsValid || player.ObserverPawn!.Value == null))
                 || (Config.DisableForBots && player.IsBot)) continue;
                 // pre-check
                 if ((player.Buttons & PlayerButtons.Use) == 0
@@ -138,27 +141,100 @@ namespace Parachute
                 if (!_parachutePlayers.ContainsKey(player)) LaunchParachute(player);
                 else
                 {
-                    var velocity = player.Pawn.Value.AbsVelocity;
+                    Vector velocity = player.Pawn.Value.AbsVelocity;
+                    float speed = 0;
                     if (velocity.Z < 0.0f)
                     {
-                        if ((player.Buttons & PlayerButtons.Moveleft) != 0 || (player.Buttons & PlayerButtons.Moveright) != 0)
+                        float yaw = player.PlayerPawn.Value.EyeAngles.Y;
+                        speed = MathF.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y);
+
+                        bool moveLeft = (player.Buttons & PlayerButtons.Moveleft) != 0;
+                        bool moveRight = (player.Buttons & PlayerButtons.Moveright) != 0;
+                        bool moveForward = (player.Buttons & PlayerButtons.Forward) != 0;
+                        bool moveBack = (player.Buttons & PlayerButtons.Back) != 0;
+
+                        if (moveForward && moveBack && moveLeft)
                         {
-                            velocity.X *= Config.SideMovementModifier;
-                            velocity.Y *= Config.SideMovementModifier;
-                            if (velocity.X > Config.MaxVelocity) velocity.X = Config.MaxVelocity;
-                            if (velocity.X < -Config.MaxVelocity) velocity.X = -Config.MaxVelocity;
-                            if (velocity.Y > Config.MaxVelocity) velocity.Y = Config.MaxVelocity;
-                            if (velocity.Y < -Config.MaxVelocity) velocity.Y = -Config.MaxVelocity;
+                            yaw -= 90;
+                            speed *= Config.SideMovementModifier;
                         }
-                        velocity.Z = Config.FallSpeed * (-1.0f);
-                        if (_parachutePlayers[player].ContainsKey("prop"))
+                        else if (moveForward && moveBack && moveRight)
                         {
-                            // update prop every tick to ensure synchroneity
-                            UpdateProp(
-                                player,
-                                int.Parse(_parachutePlayers[player]["prop"])
-                            );
+                            yaw += 90;
+                            speed *= Config.SideMovementModifier;
                         }
+                        else if (moveLeft && moveRight && moveForward)
+                        {
+                            speed *= Config.MovementModifier;
+                        }
+                        else if (moveLeft && moveRight && moveBack)
+                        {
+                            yaw += 180;
+                            speed *= Config.MovementModifier;
+                        }
+                        else if (moveLeft && moveRight)
+                        {
+                            speed = 0; // Reset speed if both left and right are pressed
+                        }
+                        else if (moveForward && moveBack)
+                        {
+                            speed = 0; // Reset speed if both forward and back are pressed
+                        }
+                        else if (moveLeft && moveForward)
+                        {
+                            yaw += 15;
+                            speed *= (Config.SideMovementModifier + Config.MovementModifier) / 2;
+                        }
+                        else if (moveRight && moveForward)
+                        {
+                            yaw -= 15;
+                            speed *= (Config.SideMovementModifier + Config.MovementModifier) / 2;
+                        }
+                        else if (moveLeft && moveBack)
+                        {
+                            yaw += 105;
+                            speed *= (Config.SideMovementModifier + Config.MovementModifier) / 2;
+                        }
+                        else if (moveRight && moveBack)
+                        {
+                            yaw -= 105;
+                            speed *= (Config.SideMovementModifier + Config.MovementModifier) / 2;
+                        }
+                        else if (moveLeft)
+                        {
+                            yaw -= 90;
+                            speed *= Config.SideMovementModifier;
+                        }
+                        else if (moveRight)
+                        {
+                            yaw += 90;
+                            speed *= Config.SideMovementModifier;
+                        }
+                        else if (moveForward)
+                        {
+                            speed *= Config.MovementModifier;
+                        }
+                        else if (moveBack)
+                        {
+                            yaw += 180;
+                            speed *= Config.MovementModifier;
+                        }
+                        yaw = MathF.PI / 180 * yaw; // Convert to radians
+                        velocity.X = MathF.Cos(yaw) * speed;
+                        velocity.Y = MathF.Sin(yaw) * speed;
+                        velocity.Z = MathF.Max(velocity.Z, Config.FallSpeed * (-1.0f));
+                        if (velocity.X > Config.MaxVelocity) velocity.X = Config.MaxVelocity;
+                        if (velocity.Y > Config.MaxVelocity) velocity.Y = Config.MaxVelocity;
+                        if (velocity.X < -Config.MaxVelocity) velocity.X = -Config.MaxVelocity;
+                        if (velocity.Y < -Config.MaxVelocity) velocity.Y = -Config.MaxVelocity;
+                    }
+                    if (_parachutePlayers[player].ContainsKey("prop"))
+                    {
+                        // update prop every tick to ensure synchroneity
+                        UpdateProp(
+                            player,
+                            int.Parse(_parachutePlayers[player]["prop"])
+                        );
                     }
                 }
             }

@@ -9,13 +9,13 @@ namespace Parachute
     public class PluginConfig : BasePluginConfig
     {
         [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
-        [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 32;
+        [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 20f;
+        [JsonPropertyName("FallSpeedModifier")] public float FallSpeedModifier { get; set; } = 1.3f;
         [JsonPropertyName("MovementModifier")] public float MovementModifier { get; set; } = 1.0075f;
-        [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0075f;
+        [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0045f;
         [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 500f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
-        [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = false;
-        [JsonPropertyName("DisableForBots")] public bool DisableForBots { get; set; } = false;
+        [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;
     }
 
     public partial class Parachute : BasePlugin, IPluginConfig<PluginConfig>
@@ -59,7 +59,7 @@ namespace Parachute
         {
             RegisterListener<Listeners.OnTick>(ListenerOnTick);
             RegisterListener<Listeners.OnServerPrecacheResources>(OnServerPrecacheResources);
-            RegisterEventHandler<EventRoundStart>(EventOnRoundStart);
+            RegisterEventHandler<EventRoundFreezeEnd>(EventOnRoundStart);
             RegisterEventHandler<EventPlayerDeath>(EventOnPlayerDeath);
             RegisterEventHandler<EventRoundEnd>(EventOnRoundEnd);
         }
@@ -121,9 +121,8 @@ namespace Parachute
                 || player == null
                 || player.Pawn == null
                 || player.Pawn.Value == null
-                || ((player.PlayerPawn == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value == null)
-                    || (player.ObserverPawn == null || !player.ObserverPawn!.IsValid || player.ObserverPawn!.Value == null))
-                || (Config.DisableForBots && player.IsBot)) continue;
+                || player.PlayerPawn == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value == null
+                || player.IsBot) continue;
                 // pre-check
                 if ((player.Buttons & PlayerButtons.Use) == 0
                     // if player is not alive
@@ -143,42 +142,43 @@ namespace Parachute
                 {
                     Vector velocity = player.Pawn.Value.AbsVelocity;
                     float speed = 0;
+                    float fallSpeed = Config.FallSpeed;
                     if (velocity.Z < 0.0f)
                     {
-                        float yaw = player.PlayerPawn.Value.EyeAngles.Y;
+                        float yaw = player.Pawn.Value.V_angle.Y;
                         speed = MathF.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y);
-
                         bool moveLeft = (player.Buttons & PlayerButtons.Moveleft) != 0;
                         bool moveRight = (player.Buttons & PlayerButtons.Moveright) != 0;
                         bool moveForward = (player.Buttons & PlayerButtons.Forward) != 0;
                         bool moveBack = (player.Buttons & PlayerButtons.Back) != 0;
-
                         if (moveForward && moveBack && moveLeft)
                         {
                             yaw -= 90;
                             speed *= Config.SideMovementModifier;
+                            fallSpeed *= Config.FallSpeedModifier;
                         }
                         else if (moveForward && moveBack && moveRight)
                         {
                             yaw += 90;
                             speed *= Config.SideMovementModifier;
+                            fallSpeed *= Config.FallSpeedModifier;
                         }
                         else if (moveLeft && moveRight && moveForward)
                         {
                             speed *= Config.MovementModifier;
+                            fallSpeed *= Config.FallSpeedModifier;
                         }
                         else if (moveLeft && moveRight && moveBack)
                         {
                             yaw += 180;
                             speed *= Config.MovementModifier;
+                            fallSpeed *= Config.FallSpeedModifier;
                         }
                         else if (moveLeft && moveRight)
                         {
-                            speed = 0; // Reset speed if both left and right are pressed
                         }
                         else if (moveForward && moveBack)
                         {
-                            speed = 0; // Reset speed if both forward and back are pressed
                         }
                         else if (moveLeft && moveForward)
                         {
@@ -204,25 +204,29 @@ namespace Parachute
                         {
                             yaw -= 90;
                             speed *= Config.SideMovementModifier;
+                            fallSpeed *= Config.FallSpeedModifier;
                         }
                         else if (moveRight)
                         {
                             yaw += 90;
                             speed *= Config.SideMovementModifier;
+                            fallSpeed *= Config.FallSpeedModifier;
                         }
                         else if (moveForward)
                         {
                             speed *= Config.MovementModifier;
+                            fallSpeed *= Config.FallSpeedModifier;
                         }
                         else if (moveBack)
                         {
                             yaw += 180;
                             speed *= Config.MovementModifier;
+                            fallSpeed *= Config.FallSpeedModifier;
                         }
                         yaw = MathF.PI / 180 * yaw; // Convert to radians
-                        velocity.X = MathF.Cos(yaw) * speed;
-                        velocity.Y = MathF.Sin(yaw) * speed;
-                        velocity.Z = MathF.Max(velocity.Z, Config.FallSpeed * (-1.0f));
+                        velocity.X = velocity.X + (MathF.Cos(yaw) * speed - velocity.X);
+                        velocity.Y = velocity.Y + (MathF.Sin(yaw) * speed - velocity.Y);
+                        velocity.Z = MathF.Max(velocity.Z, fallSpeed * (-1.0f));
                         if (velocity.X > Config.MaxVelocity) velocity.X = Config.MaxVelocity;
                         if (velocity.Y > Config.MaxVelocity) velocity.Y = Config.MaxVelocity;
                         if (velocity.X < -Config.MaxVelocity) velocity.X = -Config.MaxVelocity;
@@ -240,7 +244,7 @@ namespace Parachute
             }
         }
 
-        private HookResult EventOnRoundStart(EventRoundStart @event, GameEventInfo info)
+        private HookResult EventOnRoundStart(EventRoundFreezeEnd @event, GameEventInfo info)
         {
             _enabled = false;
             Server.PrintToChatAll(Localizer["parachute.delay"].Value.Replace("{seconds}", Config.RoundStartDelay.ToString(CultureInfo.CurrentCulture)));

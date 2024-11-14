@@ -9,11 +9,11 @@ namespace Parachute
     public class PluginConfig : BasePluginConfig
     {
         [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+        [JsonPropertyName("Lerp")] public float Lerp { get; set; } = 0.8f;
         [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 20f;
-        [JsonPropertyName("FallSpeedModifier")] public float FallSpeedModifier { get; set; } = 1.3f;
-        [JsonPropertyName("MovementModifier")] public float MovementModifier { get; set; } = 1.0075f;
-        [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0045f;
-        [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 500f;
+        [JsonPropertyName("MovementModifier")] public float MovementModifier { get; set; } = 9f;
+        [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 9f;
+        [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 750f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;
     }
@@ -142,104 +142,47 @@ namespace Parachute
                 else
                 {
                     Vector velocity = player.Pawn.Value.AbsVelocity;
-                    float speed = 0;
-                    float fallSpeed = Config.FallSpeed;
-                    if (velocity.Z < 0.0f)
+                    float speed = MathF.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y);
+                    float eyeAngle = player.Pawn.Value.V_angle.Y;
+                    float movementAngle = MathF.Atan2(velocity.Y, velocity.X) * 180 / MathF.PI;
+                    // Determine movement direction
+                    bool moveForward = (player.Buttons & PlayerButtons.Forward) != 0;
+                    bool moveBack = (player.Buttons & PlayerButtons.Back) != 0;
+                    bool moveLeft = (player.Buttons & PlayerButtons.Moveleft) != 0;
+                    bool moveRight = (player.Buttons & PlayerButtons.Moveright) != 0;
+                    // Adjust yaw and speed based on movement direction
+                    if (moveForward && !moveBack) { speed += Config.MovementModifier; }
+                    if (moveBack && !moveForward) { eyeAngle += 180; speed += Config.MovementModifier; }
+                    if (moveLeft && !moveRight) { eyeAngle += moveBack ? -25 : moveForward ? 25 : 90; speed += Config.SideMovementModifier; }
+                    if (moveRight && !moveLeft) { eyeAngle += moveBack ? 25 : moveForward ? -25 : -90; speed += Config.SideMovementModifier; }
+                    // use movementAngle if no movement keys are pressed
+                    if (!moveForward && !moveBack && !moveLeft && !moveRight ||
+                        moveForward && moveBack || moveLeft && moveRight)
                     {
-                        float yaw = player.Pawn.Value.V_angle.Y;
-                        speed = MathF.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y);
-                        bool moveLeft = (player.Buttons & PlayerButtons.Moveleft) != 0;
-                        bool moveRight = (player.Buttons & PlayerButtons.Moveright) != 0;
-                        bool moveForward = (player.Buttons & PlayerButtons.Forward) != 0;
-                        bool moveBack = (player.Buttons & PlayerButtons.Back) != 0;
-                        if (moveForward && moveBack && moveLeft)
-                        {
-                            yaw -= 90;
-                            speed *= Config.SideMovementModifier;
-                            fallSpeed *= Config.FallSpeedModifier;
-                        }
-                        else if (moveForward && moveBack && moveRight)
-                        {
-                            yaw += 90;
-                            speed *= Config.SideMovementModifier;
-                            fallSpeed *= Config.FallSpeedModifier;
-                        }
-                        else if (moveLeft && moveRight && moveForward)
-                        {
-                            speed *= Config.MovementModifier;
-                            fallSpeed *= Config.FallSpeedModifier;
-                        }
-                        else if (moveLeft && moveRight && moveBack)
-                        {
-                            yaw += 180;
-                            speed *= Config.MovementModifier;
-                            fallSpeed *= Config.FallSpeedModifier;
-                        }
-                        else if (moveLeft && moveRight)
-                        {
-                        }
-                        else if (moveForward && moveBack)
-                        {
-                        }
-                        else if (moveLeft && moveForward)
-                        {
-                            yaw += 15;
-                            speed *= (Config.SideMovementModifier + Config.MovementModifier) / 2;
-                        }
-                        else if (moveRight && moveForward)
-                        {
-                            yaw -= 15;
-                            speed *= (Config.SideMovementModifier + Config.MovementModifier) / 2;
-                        }
-                        else if (moveLeft && moveBack)
-                        {
-                            yaw += 105;
-                            speed *= (Config.SideMovementModifier + Config.MovementModifier) / 2;
-                        }
-                        else if (moveRight && moveBack)
-                        {
-                            yaw -= 105;
-                            speed *= (Config.SideMovementModifier + Config.MovementModifier) / 2;
-                        }
-                        else if (moveLeft)
-                        {
-                            yaw -= 90;
-                            speed *= Config.SideMovementModifier;
-                            fallSpeed *= Config.FallSpeedModifier;
-                        }
-                        else if (moveRight)
-                        {
-                            yaw += 90;
-                            speed *= Config.SideMovementModifier;
-                            fallSpeed *= Config.FallSpeedModifier;
-                        }
-                        else if (moveForward)
-                        {
-                            speed *= Config.MovementModifier;
-                            fallSpeed *= Config.FallSpeedModifier;
-                        }
-                        else if (moveBack)
-                        {
-                            yaw += 180;
-                            speed *= Config.MovementModifier;
-                            fallSpeed *= Config.FallSpeedModifier;
-                        }
-                        yaw = MathF.PI / 180 * yaw; // Convert to radians
-                        velocity.X = velocity.X + (MathF.Cos(yaw) * speed - velocity.X);
-                        velocity.Y = velocity.Y + (MathF.Sin(yaw) * speed - velocity.Y);
-                        velocity.Z = MathF.Max(velocity.Z, fallSpeed * (-1.0f));
-                        if (velocity.X > Config.MaxVelocity) velocity.X = Config.MaxVelocity;
-                        if (velocity.Y > Config.MaxVelocity) velocity.Y = Config.MaxVelocity;
-                        if (velocity.X < -Config.MaxVelocity) velocity.X = -Config.MaxVelocity;
-                        if (velocity.Y < -Config.MaxVelocity) velocity.Y = -Config.MaxVelocity;
+                        eyeAngle = movementAngle;
                     }
+                    else
+                    {
+                        // Normalize the angle to be within -180 to 180
+                        eyeAngle = (eyeAngle + 180) % 360 - 180;
+                    }
+                    // Convert yaw to radians
+                    float radians = eyeAngle * (MathF.PI / 180);
+                    // Calculate target velocity
+                    float targetX = MathF.Cos(radians) * speed;
+                    float targetY = MathF.Sin(radians) * speed;
+                    // Apply lerp for smooth movement
+                    float speedFactor = 1.0f - (speed / Config.MaxVelocity);
+                    targetX = MathLerp(velocity.X, targetX, Config.Lerp * speedFactor);
+                    targetY = MathLerp(velocity.Y, targetY, Config.Lerp * speedFactor);
+                    velocity.Z = MathF.Max(velocity.Z, -Config.FallSpeed);
+                    // Clamp velocity to max limits
+                    velocity.X = Math.Clamp(targetX, -Config.MaxVelocity, Config.MaxVelocity);
+                    velocity.Y = Math.Clamp(targetY, -Config.MaxVelocity, Config.MaxVelocity);
+                    // Update prop every tick to ensure synchrony
                     if (_parachutePlayers[player].ContainsKey("prop"))
                     {
-                        // update prop every tick to ensure synchroneity
-                        UpdateProp(
-                            player,
-                            int.Parse(_parachutePlayers[player]["prop"])
-                        );
+                        UpdateProp(player, int.Parse(_parachutePlayers[player]["prop"]));
                     }
                 }
             }

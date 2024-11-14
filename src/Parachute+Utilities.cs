@@ -95,5 +95,10 @@ namespace Parachute
             else
                 prop.Remove();
         }
+
+        private float MathLerp(float firstFloat, float secondFloat, float by)
+        {
+            return firstFloat * (1 - by) + secondFloat * by;
+        }
     }
 }

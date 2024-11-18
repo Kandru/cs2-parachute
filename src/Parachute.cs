@@ -15,6 +15,7 @@ namespace Parachute
         [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 9f;
         [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 750f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
+        [JsonPropertyName("EnableSounds")] public bool EnableSounds { get; set; } = true;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;
     }
 
@@ -27,6 +28,10 @@ namespace Parachute
         public void OnConfigParsed(PluginConfig config) { Config = config; }
 
         private Dictionary<CCSPlayerController, Dictionary<string, string>> _parachutePlayers = new();
+        private readonly Dictionary<string, float> _parachuteSounds = new()
+        {
+            {"Weapon_Knife.Slash", 0.5f},
+        };
         private bool _enabled = false;
         private int _enableAfterTime = 0;
 
@@ -43,6 +48,8 @@ namespace Parachute
                 _enabled = true;
                 Server.PrintToChatAll(Localizer["parachute.readyChat"]);
             }
+            // register sound events
+            InitializeEmitSound();
             // register event handler
             CreateEventHandler();
         }
@@ -79,6 +86,11 @@ namespace Parachute
                 player,
                 "models/props_survival/parachute/chute.vmdl"
             ).ToString();
+            if (Config.EnableSounds && _parachuteSounds.Count > 0)
+            {
+                _parachutePlayers[player]["sound"] = _parachuteSounds.ElementAt(Random.Shared.Next(_parachuteSounds.Count)).Key;
+                _parachutePlayers[player]["sound_next"] = "0";
+            }
         }
 
         private void RemoveParachute(CCSPlayerController player)
@@ -183,6 +195,15 @@ namespace Parachute
                     if (_parachutePlayers[player].ContainsKey("prop"))
                     {
                         UpdateProp(player, int.Parse(_parachutePlayers[player]["prop"]));
+                    }
+                    // emit sound if any
+                    if (_parachutePlayers[player].ContainsKey("sound"))
+                    {
+                        if (Server.CurrentTime >= float.Parse(_parachutePlayers[player]["sound_next"]))
+                        {
+                            EmitSound(player, _parachutePlayers[player]["sound"]);
+                            _parachutePlayers[player]["sound_next"] = (Server.CurrentTime + _parachuteSounds[_parachutePlayers[player]["sound"]]).ToString();
+                        }
                     }
                 }
             }

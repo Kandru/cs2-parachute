@@ -38,6 +38,7 @@ This plugin automatically creates a readable JSON configuration file. This confi
   "SideMovementModifier": 5,
   "MaxVelocity": 500,
   "RoundStartDelay": 10,
+  "EnableSounds": true,
   "DisableWhenCarryingHostage": true,
   "ConfigVersion": 1
 }
@@ -66,6 +67,10 @@ Maximum velocity a player can reach, regardless of the boost.
 ### RoundStartDelay
 
 Delay after the round starts before the parachute can be used.
+
+### EnableSounds
+
+Wether or not sounds are enabled when flying.
 
 ### DisableWhenCarryingHostage
 

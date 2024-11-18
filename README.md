@@ -29,6 +29,48 @@ Updating is even easier: simply overwrite all plugin files and they will be relo
 
 This plugin automatically creates a readable JSON configuration file. This configuration file can be found in `/addons/counterstrikesharp/configs/plugins/Parachute/Parachute.json`.
 
+```json
+{
+  "Enabled": true,
+  "Lerp": 0.8,
+  "FallSpeed": 20,
+  "MovementModifier": 9,
+  "SideMovementModifier": 5,
+  "MaxVelocity": 500,
+  "RoundStartDelay": 10,
+  "DisableWhenCarryingHostage": true,
+  "ConfigVersion": 1
+}
+```
+
+### Enabled
+
+Wether or not the parachute is enabled globally.
+
+### Lerp
+
+Lerp is used to smoothly transition between the current speed of the user and the given (Side)MovementModifier. A lower value means it takes more time. A higher value (e.g. 1.0) means instant speed.
+
+### MovementModifier
+
+How much a player gets boosted forward or backwards.
+
+### SideMovementModifier
+
+How much a player gets boosted sideways.
+
+### MaxVelocity
+
+Maximum velocity a player can reach, regardless of the boost.
+
+### RoundStartDelay
+
+Delay after the round starts before the parachute can be used.
+
+### DisableWhenCarryingHostage
+
+Whether or not do disable the parachute if a player carries a hostage.
+
 ## Compile Yourself
 
 Clone the project:

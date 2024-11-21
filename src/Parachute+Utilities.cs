@@ -25,7 +25,7 @@ namespace Parachute
             // spawn it
             prop.DispatchSpawn();
             prop.SetModel(model);
-            prop.Teleport(new Vector(-999, -999, -999));
+            prop.Teleport(player.Pawn.Value.AbsOrigin!, player.Pawn.Value.AbsRotation!);
             prop.AnimGraphUpdateEnabled = false;
             prop.CBodyComponent!.SceneNode!.Scale = scale;
             // set team color

@@ -25,22 +25,24 @@ namespace Parachute
             // spawn it
             prop.DispatchSpawn();
             prop.SetModel(model);
-            prop.Teleport(player.Pawn.Value.AbsOrigin!, player.Pawn.Value.AbsRotation!);
-            prop.AnimGraphUpdateEnabled = false;
+            prop.Teleport(new Vector(-999, -999, -999));
             prop.CBodyComponent!.SceneNode!.Scale = scale;
-            // set team color
-            if (player.Team == CsTeam.Terrorist)
-            {
-                prop.Render = Color.FromArgb(255, Random.Shared.Next(100, 256), 0, 0);
-            }
-            else if (player.Team == CsTeam.CounterTerrorist)
-            {
-                prop.Render = Color.FromArgb(255, 0, 0, Random.Shared.Next(100, 256));
-            }
+            // get parachute flags
+            ParachuteFlags parachuteFlags = _parachuteModels[_parachutePlayers[player]["type"]].Values.First();
+            // FLAG: SetTeamColor
+            if ((parachuteFlags & ParachuteFlags.SetTeamColor) != 0)
+                if (player.Team == CsTeam.Terrorist)
+                {
+                    prop.Render = Color.FromArgb(255, Random.Shared.Next(100, 256), 0, 0);
+                }
+                else if (player.Team == CsTeam.CounterTerrorist)
+                {
+                    prop.Render = Color.FromArgb(255, 0, 0, Random.Shared.Next(100, 256));
+                }
             return (int)prop.Index;
         }
 
-        private void UpdateProp(CCSPlayerController player, int index, int offset_z = 0, int offset_angle = 0)
+        private void UpdateProp(CCSPlayerController player, int index)
         {
             var prop = Utilities.GetEntityFromIndex<CDynamicProp>((int)index);
             // sanity checks
@@ -50,32 +52,74 @@ namespace Parachute
             || player.Pawn.Value.LifeState != (byte)LifeState_t.LIFE_ALIVE) return;
             // get player pawn
             var playerPawn = player!.Pawn!.Value;
-            // teleport it to player
-            Vector playerOrigin = new Vector(
-                (float)Math.Round(playerPawn.AbsOrigin!.X, 5),
-                (float)Math.Round(playerPawn.AbsOrigin!.Y, 5),
-                (float)Math.Round(playerPawn.AbsOrigin!.Z, 5) + offset_z
+            // set vectors and rotation
+            Vector playerOrigin = new(
+                playerPawn.AbsOrigin!.X,
+                playerPawn.AbsOrigin!.Y,
+                playerPawn.AbsOrigin!.Z
             );
-            Vector propOrigin = new Vector(
-                (float)Math.Round(prop.AbsOrigin!.X, 5),
-                (float)Math.Round(prop.AbsOrigin!.Y, 5),
-                (float)Math.Round(prop.AbsOrigin!.Z, 5)
+            QAngle playerRotation = new(
+                playerPawn.V_angle!.X,
+                playerPawn.V_angle!.Y,
+                playerPawn.V_angle!.Z
             );
-            QAngle playerRotation = new QAngle(
-                0,
-                (float)Math.Round(playerPawn.AbsRotation!.Y, 5) + offset_angle,
-                0
+            QAngle propRotation = new(
+                prop.AbsRotation!.X,
+                prop.AbsRotation!.Y,
+                prop.AbsRotation!.Z
             );
-            QAngle propRotation = new QAngle(
-                0,
-                (float)Math.Round(prop.AbsRotation!.Y, 5),
-                0
-            );
-            if (playerOrigin.X == propOrigin.X
-                && playerOrigin.Y == propOrigin.Y
-                && playerOrigin.Z == propOrigin.Z
-                && playerRotation.Y == propRotation.Y) return;
-            prop.Teleport(playerOrigin, playerRotation);
+            // get parachute flags
+            ParachuteFlags parachuteFlags = _parachuteModels[_parachutePlayers[player]["type"]].Values.First();
+            // FLAG: MountAsBackpack
+            if ((parachuteFlags & ParachuteFlags.MountAsBackpack) != 0)
+            {
+                // rotate prop 90 degrees
+                propRotation.X = 90;
+                // roate prop to align with players back
+                propRotation.Z = 20;
+                // vertical rotation with the player
+                propRotation.Y = playerRotation.Y;
+                // move prop 50 units higher
+                playerOrigin.Z += 50;
+                // Calculate the backwards vector
+                var backward = new Vector(
+                    -MathF.Sin(playerRotation.Y * (MathF.PI / 180)),
+                    MathF.Cos(playerRotation.Y * (MathF.PI / 180)),
+                    0
+                );
+                // calculate the right vector as orthogonal to the backward vector
+                var right = new Vector(
+                    backward.Y,
+                    -backward.X,
+                    0
+                );
+                // move prop 50 units backwards and 10 units to the right
+                playerOrigin += (backward * 10) + (right * -20);
+            }
+            // FLAG: MountAsCarpet
+            if ((parachuteFlags & ParachuteFlags.MountAsCarpet) != 0)
+            {
+                // vertical rotation with the player
+                propRotation.Y = playerRotation.Y;
+                // rotate prop 90 degrees
+                propRotation.Y += 90;
+                // move prop 50 units lower
+                playerOrigin.Z -= 30;
+                // Calculate the backwards vector
+                var backward = new Vector(
+                    -MathF.Sin(playerRotation.Y * (MathF.PI / 180)),
+                    MathF.Cos(playerRotation.Y * (MathF.PI / 180)),
+                    0
+                );
+                // calculate the right vector as orthogonal to the backward vector
+                var right = new Vector(
+                    backward.Y,
+                    -backward.X,
+                    0
+                );
+                playerOrigin += (backward * 3) + (right * 20);
+            }
+            prop.Teleport(playerOrigin, propRotation, player.Pawn.Value.AbsVelocity);
         }
 
         private void RemoveProp(int index, bool softRemove = false)

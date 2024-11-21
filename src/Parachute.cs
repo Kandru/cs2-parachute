@@ -1,7 +1,7 @@
-using System.Globalization;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace Parachute
@@ -19,6 +19,14 @@ namespace Parachute
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;
     }
 
+    public enum ParachuteFlags : byte
+    {
+        SetTeamColor = 1,
+        MountAsBackpack = 2,
+        EndlessBladeRotation = 4,
+        MountAsCarpet = 8,
+    }
+
     public partial class Parachute : BasePlugin, IPluginConfig<PluginConfig>
     {
         public override string ModuleName => "CS2 Parachute";
@@ -31,6 +39,12 @@ namespace Parachute
         private readonly Dictionary<string, float> _parachuteSounds = new()
         {
             {"Weapon_Knife.Slash", 0.5f},
+        };
+        private readonly Dictionary<string, Dictionary<string, ParachuteFlags>> _parachuteModels = new()
+        {
+            {"standard", new Dictionary<string, ParachuteFlags> { { "models/props_survival/parachute/chute.vmdl", ParachuteFlags.SetTeamColor } } },
+            {"ceiling_fan", new Dictionary<string, ParachuteFlags> { { "models/props/de_inferno/ceiling_fan_blade.vmdl", ParachuteFlags.MountAsBackpack | ParachuteFlags.EndlessBladeRotation } } },
+            {"cat_carpet", new Dictionary<string, ParachuteFlags> { { "models/props/de_dust/hr_dust/dust_cart/cart_carpet.vmdl", ParachuteFlags.MountAsCarpet } } },
         };
         private bool _enabled = false;
         private int _enableAfterTime = 0;
@@ -82,9 +96,11 @@ namespace Parachute
         {
             if (_parachutePlayers.ContainsKey(player)) return;
             _parachutePlayers.Add(player, new Dictionary<string, string>());
+            // get random parachute
+            _parachutePlayers[player]["type"] = _parachuteModels.ElementAt(Random.Shared.Next(_parachuteModels.Count)).Key;
             _parachutePlayers[player]["prop"] = SpawnProp(
                 player,
-                "models/props_survival/parachute/chute.vmdl"
+                _parachuteModels[_parachutePlayers[player]["type"]].Keys.First()
             ).ToString();
             if (Config.EnableSounds && _parachuteSounds.Count > 0)
             {

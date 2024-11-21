@@ -75,8 +75,6 @@ namespace Parachute
             {
                 // rotate prop 90 degrees
                 propRotation.X = 90;
-                // roate prop to align with players back
-                propRotation.Z = 20;
                 // vertical rotation with the player
                 propRotation.Y = playerRotation.Y;
                 // move prop 50 units higher
@@ -94,7 +92,7 @@ namespace Parachute
                     0
                 );
                 // move prop 50 units backwards and 10 units to the right
-                playerOrigin += (backward * 10) + (right * -20);
+                playerOrigin += (backward * 5) + (right * -20);
             }
             // FLAG: MountAsCarpet
             if ((parachuteFlags & ParachuteFlags.MountAsCarpet) != 0)

@@ -143,7 +143,8 @@ namespace Parachute
                     // if player is not in the air
                     || player.Pawn.Value.GroundEntity.Value != null
                     // if player carries a hostage and this is not allowed due to configuration
-                    || (Config.DisableWhenCarryingHostage && player.PlayerPawn.Value.HostageServices!.CarriedHostageProp.Value != null))
+                    || (Config.DisableWhenCarryingHostage && player.PlayerPawn.Value.HostageServices!.CarriedHostageProp.Value != null)
+                    || player.Pawn.Value.MoveType == MoveType_t.MOVETYPE_LADDER)
                 {
                     if (_parachutePlayers.ContainsKey(player) && _parachutePlayers[player].ContainsKey("prop")) RemoveProp(int.Parse(_parachutePlayers[player]["prop"]), true);
                     // stop interaction

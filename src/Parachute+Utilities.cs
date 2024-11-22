@@ -26,9 +26,9 @@ namespace Parachute
             prop.DispatchSpawn();
             prop.SetModel(model);
             prop.Teleport(new Vector(-999, -999, -999));
-            prop.CBodyComponent!.SceneNode!.Scale = _parachuteModels[_parachutePlayers[player]["type"]].Values.First().Item2;
+            prop.CBodyComponent!.SceneNode!.Scale = _parachuteModels[_parachutePlayers[player.UserId ?? -1]["type"]].Values.First().Item2;
             // get parachute flags
-            ParachuteFlags parachuteFlags = _parachuteModels[_parachutePlayers[player]["type"]].Values.First().Item1;
+            ParachuteFlags parachuteFlags = _parachuteModels[_parachutePlayers[player.UserId ?? -1]["type"]].Values.First().Item1;
             // FLAG: SetTeamColor
             if ((parachuteFlags & ParachuteFlags.SetTeamColor) != 0)
                 if (player.Team == CsTeam.Terrorist)
@@ -69,7 +69,7 @@ namespace Parachute
                 prop.AbsRotation!.Z
             );
             // get parachute flags
-            ParachuteFlags parachuteFlags = _parachuteModels[_parachutePlayers[player]["type"]].Values.First().Item1;
+            ParachuteFlags parachuteFlags = _parachuteModels[_parachutePlayers[player.UserId ?? -1]["type"]].Values.First().Item1;
             // FLAG: MountAsBackpack
             if ((parachuteFlags & ParachuteFlags.MountAsBackpack) != 0)
             {

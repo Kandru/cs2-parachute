@@ -37,7 +37,7 @@ namespace Parachute
         public PluginConfig Config { get; set; } = null!;
         public void OnConfigParsed(PluginConfig config) { Config = config; }
 
-        private Dictionary<CCSPlayerController, Dictionary<string, string>> _parachutePlayers = new();
+        private Dictionary<int, Dictionary<string, string>> _parachutePlayers = new();
         private readonly Dictionary<string, Dictionary<string, (ParachuteFlags, float)>> _parachuteModels = new()
         {
             {"standard", new Dictionary<string, (ParachuteFlags, float)> { { "models/props_survival/parachute/chute.vmdl", (ParachuteFlags.SetTeamColor, 1.0f) } } },
@@ -103,34 +103,35 @@ namespace Parachute
 
         private void LaunchParachute(CCSPlayerController player)
         {
-            if (_parachutePlayers.ContainsKey(player)) return;
-            _parachutePlayers.Add(player, new Dictionary<string, string>());
+            if (_parachutePlayers.ContainsKey(player.UserId ?? -1)) return;
+            _parachutePlayers.Add(player.UserId ?? -1, new Dictionary<string, string>());
             // get random parachute
-            _parachutePlayers[player]["type"] = _parachuteModels.ElementAt(Random.Shared.Next(_parachuteModels.Count)).Key;
-            _parachutePlayers[player]["prop"] = SpawnProp(
+            _parachutePlayers[player.UserId ?? -1]["type"] = _parachuteModels.ElementAt(Random.Shared.Next(_parachuteModels.Count)).Key;
+            _parachutePlayers[player.UserId ?? -1]["prop"] = SpawnProp(
                 player,
-                _parachuteModels[_parachutePlayers[player]["type"]].Keys.First()
+                _parachuteModels[_parachutePlayers[player.UserId ?? -1]["type"]].Keys.First()
             ).ToString();
-            if (Config.EnableSounds && _parachuteSounds.ContainsKey(_parachutePlayers[player]["type"]))
+            if (Config.EnableSounds && _parachuteSounds.ContainsKey(_parachutePlayers[player.UserId ?? -1]["type"]))
             {
-                var soundEntry = _parachuteSounds[_parachutePlayers[player]["type"]].ElementAt(Random.Shared.Next(_parachuteSounds[_parachutePlayers[player]["type"]].Count));
-                _parachutePlayers[player]["sound"] = soundEntry.Key;
-                _parachutePlayers[player]["sound_time"] = soundEntry.Value.ToString();
-                _parachutePlayers[player]["sound_next"] = "0";
+                var soundEntry = _parachuteSounds[_parachutePlayers[player.UserId ?? -1]["type"]].ElementAt(Random.Shared.Next(_parachuteSounds[_parachutePlayers[player.UserId ?? -1]["type"]].Count));
+                _parachutePlayers[player.UserId ?? -1]["sound"] = soundEntry.Key;
+                _parachutePlayers[player.UserId ?? -1]["sound_time"] = soundEntry.Value.ToString();
+                _parachutePlayers[player.UserId ?? -1]["sound_next"] = "0";
             }
         }
 
         private void RemoveParachute(CCSPlayerController player)
         {
-            if (!_parachutePlayers.ContainsKey(player)) return;
-            if (_parachutePlayers[player].ContainsKey("prop")) RemoveProp(int.Parse(_parachutePlayers[player]["prop"]));
-            _parachutePlayers.Remove(player);
+            if (!_parachutePlayers.ContainsKey(player.UserId ?? -1)) return;
+            if (_parachutePlayers[player.UserId ?? -1].ContainsKey("prop")) RemoveProp(int.Parse(_parachutePlayers[player.UserId ?? -1]["prop"]));
+            _parachutePlayers.Remove(player.UserId ?? -1);
         }
 
         private void ResetParachutes()
         {
-            foreach (CCSPlayerController player in _parachutePlayers.Keys)
+            foreach (int userid in _parachutePlayers.Keys)
             {
+                CCSPlayerController player = Utilities.GetPlayerFromUserid(userid)!;
                 if (player == null || player.Pawn == null || player.Pawn.Value == null) continue;
                 RemoveParachute(player);
             }
@@ -173,12 +174,12 @@ namespace Parachute
                     || (Config.DisableWhenCarryingHostage && player.PlayerPawn.Value.HostageServices!.CarriedHostageProp.Value != null)
                     || player.Pawn.Value.MoveType == MoveType_t.MOVETYPE_LADDER)
                 {
-                    if (_parachutePlayers.ContainsKey(player) && _parachutePlayers[player].ContainsKey("prop")) RemoveProp(int.Parse(_parachutePlayers[player]["prop"]), true);
+                    if (_parachutePlayers.ContainsKey(player.UserId ?? -1) && _parachutePlayers[player.UserId ?? -1].ContainsKey("prop")) RemoveProp(int.Parse(_parachutePlayers[player.UserId ?? -1]["prop"]), true);
                     // stop interaction
                     continue;
                 }
                 // launch parachute
-                if (!_parachutePlayers.ContainsKey(player)) LaunchParachute(player);
+                if (!_parachutePlayers.ContainsKey(player.UserId ?? -1)) LaunchParachute(player);
                 else
                 {
                     Vector velocity = player.Pawn.Value.AbsVelocity;
@@ -220,17 +221,17 @@ namespace Parachute
                     velocity.X = Math.Clamp(targetX, -Config.MaxVelocity, Config.MaxVelocity);
                     velocity.Y = Math.Clamp(targetY, -Config.MaxVelocity, Config.MaxVelocity);
                     // Update prop every tick to ensure synchrony
-                    if (_parachutePlayers[player].ContainsKey("prop"))
+                    if (_parachutePlayers[player.UserId ?? -1].ContainsKey("prop"))
                     {
-                        UpdateProp(player, int.Parse(_parachutePlayers[player]["prop"]));
+                        UpdateProp(player, int.Parse(_parachutePlayers[player.UserId ?? -1]["prop"]));
                     }
                     // emit sound if any
-                    if (_parachutePlayers[player].ContainsKey("sound"))
+                    if (_parachutePlayers[player.UserId ?? -1].ContainsKey("sound"))
                     {
-                        if (Server.CurrentTime >= float.Parse(_parachutePlayers[player]["sound_next"]))
+                        if (Server.CurrentTime >= float.Parse(_parachutePlayers[player.UserId ?? -1]["sound_next"]))
                         {
-                            EmitSound(player, _parachutePlayers[player]["sound"]);
-                            _parachutePlayers[player]["sound_next"] = (Server.CurrentTime + float.Parse(_parachutePlayers[player]["sound_time"])).ToString();
+                            EmitSound(player, _parachutePlayers[player.UserId ?? -1]["sound"]);
+                            _parachutePlayers[player.UserId ?? -1]["sound_next"] = (Server.CurrentTime + float.Parse(_parachutePlayers[player.UserId ?? -1]["sound_time"])).ToString();
                         }
                     }
                 }

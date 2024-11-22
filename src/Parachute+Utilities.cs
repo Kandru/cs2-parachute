@@ -26,9 +26,9 @@ namespace Parachute
             prop.DispatchSpawn();
             prop.SetModel(model);
             prop.Teleport(new Vector(-999, -999, -999));
-            prop.CBodyComponent!.SceneNode!.Scale = scale;
+            prop.CBodyComponent!.SceneNode!.Scale = _parachuteModels[_parachutePlayers[player]["type"]].Values.First().Item2;
             // get parachute flags
-            ParachuteFlags parachuteFlags = _parachuteModels[_parachutePlayers[player]["type"]].Values.First();
+            ParachuteFlags parachuteFlags = _parachuteModels[_parachutePlayers[player]["type"]].Values.First().Item1;
             // FLAG: SetTeamColor
             if ((parachuteFlags & ParachuteFlags.SetTeamColor) != 0)
                 if (player.Team == CsTeam.Terrorist)
@@ -69,7 +69,7 @@ namespace Parachute
                 prop.AbsRotation!.Z
             );
             // get parachute flags
-            ParachuteFlags parachuteFlags = _parachuteModels[_parachutePlayers[player]["type"]].Values.First();
+            ParachuteFlags parachuteFlags = _parachuteModels[_parachutePlayers[player]["type"]].Values.First().Item1;
             // FLAG: MountAsBackpack
             if ((parachuteFlags & ParachuteFlags.MountAsBackpack) != 0)
             {
@@ -116,6 +116,71 @@ namespace Parachute
                     0
                 );
                 playerOrigin += (backward * 3) + (right * 20);
+            }
+            // FLAG: IsAirplane
+            if ((parachuteFlags & ParachuteFlags.IsAirplane) != 0)
+            {
+                // calculate tilt based on player's movement and angle
+                float tiltSpeed = 1.0f; // Speed at which tilt angle is adjusted
+                float maxTiltAngle = 55.0f; // Maximum tilt angle in degrees
+                float maxSpeedForFullTilt = 2.0f; // Speed at which full tilt is achieved
+                float tiltAngle;
+                float targetTiltAngle;
+                float currentTiltAngle = prop.AbsRotation.Z;
+                // Calculate the difference in angle
+                float angleDifference = playerPawn.V_angle.Y - playerPawn.V_anglePrevious.Y;
+                // Determine target tilt angle based on player's look direction and speed
+                if (Math.Abs(angleDifference) > 0.1f) // Check if player is looking left or right
+                {
+                    float speedFactor = Math.Clamp(Math.Abs(angleDifference) / maxSpeedForFullTilt, 0.0f, 1.0f);
+                    targetTiltAngle = maxTiltAngle * speedFactor * -Math.Sign(angleDifference);
+                }
+                else
+                {
+                    targetTiltAngle = 0; // Player is not moving, reset tilt angle
+                }
+                // Smoothly adjust tilt angle to target tilt angle
+                if (currentTiltAngle < targetTiltAngle)
+                {
+                    tiltAngle = Math.Min(currentTiltAngle + tiltSpeed, targetTiltAngle); // Adjust tilt angle positively
+                }
+                else if (currentTiltAngle > targetTiltAngle)
+                {
+                    tiltAngle = Math.Max(currentTiltAngle - tiltSpeed, targetTiltAngle); // Adjust tilt angle negatively
+                }
+                else
+                {
+                    tiltAngle = currentTiltAngle; // No change needed
+                }
+                // Set the tilt angle
+                propRotation.Z = tiltAngle;
+                // vertical rotation with the player
+                propRotation.Y = playerRotation.Y;
+                // move prop 10 units lower
+                playerOrigin.Z -= 10;
+                // Calculate the backwards vector
+                var backward = new Vector(
+                    -MathF.Sin(playerRotation.Y * (MathF.PI / 180)),
+                    MathF.Cos(playerRotation.Y * (MathF.PI / 180)),
+                    0
+                );
+                // calculate the right vector as orthogonal to the backward vector
+                var right = new Vector(
+                    backward.Y,
+                    -backward.X,
+                    0
+                );
+                playerOrigin += right * 20;
+            }
+            // FLAG: IsVehicle
+            if ((parachuteFlags & ParachuteFlags.IsVehicle) != 0)
+            {
+                // vertical rotation with the player
+                propRotation.Y = playerRotation.Y;
+                // rotate prop 90 degrees
+                propRotation.Y -= 90;
+                // move prop 10 units lower
+                playerOrigin.Z -= 5;
             }
             prop.Teleport(playerOrigin, propRotation, player.Pawn.Value.AbsVelocity);
         }

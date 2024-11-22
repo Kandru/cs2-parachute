@@ -25,6 +25,8 @@ namespace Parachute
         MountAsBackpack = 2,
         EndlessBladeRotation = 4,
         MountAsCarpet = 8,
+        IsAirplane = 16,
+        IsVehicle = 32,
     }
 
     public partial class Parachute : BasePlugin, IPluginConfig<PluginConfig>
@@ -36,15 +38,22 @@ namespace Parachute
         public void OnConfigParsed(PluginConfig config) { Config = config; }
 
         private Dictionary<CCSPlayerController, Dictionary<string, string>> _parachutePlayers = new();
-        private readonly Dictionary<string, float> _parachuteSounds = new()
+        private readonly Dictionary<string, Dictionary<string, (ParachuteFlags, float)>> _parachuteModels = new()
         {
-            {"Weapon_Knife.Slash", 0.5f},
+            {"standard", new Dictionary<string, (ParachuteFlags, float)> { { "models/props_survival/parachute/chute.vmdl", (ParachuteFlags.SetTeamColor, 1.0f) } } },
+            {"ceiling_fan", new Dictionary<string, (ParachuteFlags, float)> { { "models/props/de_inferno/ceiling_fan_blade.vmdl", (ParachuteFlags.MountAsBackpack | ParachuteFlags.EndlessBladeRotation, 1.0f) } } },
+            {"cat_carpet", new Dictionary<string, (ParachuteFlags, float)> { { "models/props/de_dust/hr_dust/dust_cart/cart_carpet.vmdl", (ParachuteFlags.MountAsCarpet, 1.0f) } } },
+            {"airplane_small", new Dictionary<string, (ParachuteFlags, float)> { { "models/vehicles/airplane_small_01/airplane_small_01.vmdl", (ParachuteFlags.IsAirplane | ParachuteFlags.SetTeamColor, 0.3f) } } },
+            {"airplane_medium", new Dictionary<string, (ParachuteFlags, float)> { { "models/vehicles/airplane_medium_01/airplane_medium_01_landed.vmdl", (ParachuteFlags.IsAirplane | ParachuteFlags.SetTeamColor, 0.09f) } } },
+            {"taxi_city", new Dictionary<string, (ParachuteFlags, float)> { { "models/props_vehicles/taxi_city.vmdl", (ParachuteFlags.IsVehicle | ParachuteFlags.SetTeamColor, 0.3f) } } },
         };
-        private readonly Dictionary<string, Dictionary<string, ParachuteFlags>> _parachuteModels = new()
+        private readonly Dictionary<string, Dictionary<string, float>> _parachuteSounds = new()
         {
-            {"standard", new Dictionary<string, ParachuteFlags> { { "models/props_survival/parachute/chute.vmdl", ParachuteFlags.SetTeamColor } } },
-            {"ceiling_fan", new Dictionary<string, ParachuteFlags> { { "models/props/de_inferno/ceiling_fan_blade.vmdl", ParachuteFlags.MountAsBackpack | ParachuteFlags.EndlessBladeRotation } } },
-            {"cat_carpet", new Dictionary<string, ParachuteFlags> { { "models/props/de_dust/hr_dust/dust_cart/cart_carpet.vmdl", ParachuteFlags.MountAsCarpet } } },
+            {"standard", new Dictionary<string, float> { { "Weapon_Knife.Slash", 0.5f } } },
+            {"ceiling_fan", new Dictionary<string, float> { { "Weapon_Knife.Slash", 0.5f } } },
+            {"cat_carpet", new Dictionary<string, float> { { "Weapon_Knife.Slash", 0.5f } } },
+            {"airplane_small", new Dictionary<string, float> { { "Weapon_Knife.Slash", 0.5f } } },
+            {"taxi_city", new Dictionary<string, float> { { "Weapon_Knife.Slash", 0.5f } } },
         };
         private bool _enabled = false;
         private int _enableAfterTime = 0;
@@ -102,9 +111,12 @@ namespace Parachute
                 player,
                 _parachuteModels[_parachutePlayers[player]["type"]].Keys.First()
             ).ToString();
-            if (Config.EnableSounds && _parachuteSounds.Count > 0)
+            if (Config.EnableSounds && _parachuteSounds.ContainsKey(_parachutePlayers[player]["type"]))
             {
-                _parachutePlayers[player]["sound"] = _parachuteSounds.ElementAt(Random.Shared.Next(_parachuteSounds.Count)).Key;
+                var soundEntry = _parachuteSounds[_parachutePlayers[player]["type"]].ElementAt(Random.Shared.Next(_parachuteSounds[_parachutePlayers[player]["type"]].Count));
+                _parachutePlayers[player]["sound"] = soundEntry.Key;
+                _parachutePlayers[player]["sound_time"] = soundEntry.Value.ToString();
+                Console.WriteLine(_parachutePlayers[player]["sound"]);
                 _parachutePlayers[player]["sound_next"] = "0";
             }
         }
@@ -219,7 +231,7 @@ namespace Parachute
                         if (Server.CurrentTime >= float.Parse(_parachutePlayers[player]["sound_next"]))
                         {
                             EmitSound(player, _parachutePlayers[player]["sound"]);
-                            _parachutePlayers[player]["sound_next"] = (Server.CurrentTime + _parachuteSounds[_parachutePlayers[player]["sound"]]).ToString();
+                            _parachutePlayers[player]["sound_next"] = (Server.CurrentTime + float.Parse(_parachutePlayers[player]["sound_time"])).ToString();
                         }
                     }
                 }

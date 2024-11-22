@@ -116,7 +116,6 @@ namespace Parachute
                 var soundEntry = _parachuteSounds[_parachutePlayers[player]["type"]].ElementAt(Random.Shared.Next(_parachuteSounds[_parachutePlayers[player]["type"]].Count));
                 _parachutePlayers[player]["sound"] = soundEntry.Key;
                 _parachutePlayers[player]["sound_time"] = soundEntry.Value.ToString();
-                Console.WriteLine(_parachutePlayers[player]["sound"]);
                 _parachutePlayers[player]["sound_next"] = "0";
             }
         }

@@ -120,11 +120,11 @@ namespace Parachute
             }
         }
 
-        private void RemoveParachute(CCSPlayerController player)
+        private void RemoveParachute(int UserId)
         {
-            if (!_parachutePlayers.ContainsKey(player.UserId ?? -1)) return;
-            if (_parachutePlayers[player.UserId ?? -1].ContainsKey("prop")) RemoveProp(int.Parse(_parachutePlayers[player.UserId ?? -1]["prop"]));
-            _parachutePlayers.Remove(player.UserId ?? -1);
+            if (!_parachutePlayers.ContainsKey(UserId)) return;
+            if (_parachutePlayers[UserId].ContainsKey("prop")) RemoveProp(int.Parse(_parachutePlayers[UserId]["prop"]));
+            _parachutePlayers.Remove(UserId);
         }
 
         private void ResetParachutes()
@@ -133,7 +133,7 @@ namespace Parachute
             {
                 CCSPlayerController player = Utilities.GetPlayerFromUserid(userid)!;
                 if (player == null || player.Pawn == null || player.Pawn.Value == null) continue;
-                RemoveParachute(player);
+                RemoveParachute(player.UserId ?? -1);
             }
             _parachutePlayers.Clear();
         }
@@ -256,8 +256,7 @@ namespace Parachute
 
         private HookResult EventOnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
         {
-            CCSPlayerController player = @event.Userid!;
-            RemoveParachute(player);
+            RemoveParachute(@event.Userid!.UserId ?? -1);
             return HookResult.Continue;
         }
 

@@ -133,7 +133,11 @@ namespace Parachute
             foreach (int userid in _parachutePlayersCopy.Keys)
             {
                 CCSPlayerController? player = Utilities.GetPlayerFromUserid(userid);
-                if (player == null || player.Pawn == null || player.Pawn.Value == null) continue;
+                if (player == null
+                    || !player.IsValid
+                    || player.Pawn == null
+                    || !player.PlayerPawn.IsValid
+                    || player.Pawn.Value == null) continue;
                 RemoveParachute(player.UserId ?? -1);
             }
             _parachutePlayers.Clear();

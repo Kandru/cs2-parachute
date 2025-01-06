@@ -189,8 +189,7 @@ namespace Parachute
         {
             var prop = Utilities.GetEntityFromIndex<CDynamicProp>((int)index);
             // remove plant entity
-            if (prop == null)
-                return;
+            if (prop == null || !prop.IsValid || prop.Handle == IntPtr.Zero || prop.AbsOrigin == null) return;
             if (softRemove)
             {
                 if (prop.AbsOrigin!.X == -999

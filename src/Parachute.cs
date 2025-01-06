@@ -129,7 +129,8 @@ namespace Parachute
 
         private void ResetParachutes()
         {
-            foreach (int userid in _parachutePlayers.Keys)
+            Dictionary<int, Dictionary<string, string>> _parachutePlayersCopy = new(_parachutePlayers);
+            foreach (int userid in _parachutePlayersCopy.Keys)
             {
                 CCSPlayerController? player = Utilities.GetPlayerFromUserid(userid);
                 if (player == null || player.Pawn == null || player.Pawn.Value == null) continue;

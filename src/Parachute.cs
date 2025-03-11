@@ -9,10 +9,8 @@ namespace Parachute
     public class PluginConfig : BasePluginConfig
     {
         [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
-        [JsonPropertyName("MaxSpeed")] public float MaxSpeed { get; set; } = 200f;
         [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 0.1f;
-        [JsonPropertyName("ForwardSpeed")] public float ForwardSpeed { get; set; } = 200f;
-        [JsonPropertyName("SidewardSpeed")] public float SidewardSpeed { get; set; } = 10f;
+        [JsonPropertyName("SpeedMultiplier")] public float SpeedMultiplier { get; set; } = 1.1f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;
     }

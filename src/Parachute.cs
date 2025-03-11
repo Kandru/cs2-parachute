@@ -9,7 +9,10 @@ namespace Parachute
     public class PluginConfig : BasePluginConfig
     {
         [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+        [JsonPropertyName("MaxSpeed")] public float MaxSpeed { get; set; } = 200f;
         [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 0.1f;
+        [JsonPropertyName("ForwardSpeed")] public float ForwardSpeed { get; set; } = 200f;
+        [JsonPropertyName("SidewardSpeed")] public float SidewardSpeed { get; set; } = 10f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;
     }
@@ -32,15 +35,15 @@ namespace Parachute
         public PluginConfig Config { get; set; } = null!;
         public void OnConfigParsed(PluginConfig config) { Config = config; }
 
-        private Dictionary<int, Dictionary<string, string>> _parachutePlayers = new();
+        private Dictionary<CCSPlayerController, Dictionary<string, string>> _parachutes = new();
         private readonly Dictionary<string, Dictionary<string, (ParachuteFlags, float)>> _parachuteModels = new()
         {
             {"standard", new Dictionary<string, (ParachuteFlags, float)> { { "models/props_survival/parachute/chute.vmdl", (ParachuteFlags.SetTeamColor, 1.0f) } } },
-            {"ceiling_fan", new Dictionary<string, (ParachuteFlags, float)> { { "models/props/de_inferno/ceiling_fan_blade.vmdl", (ParachuteFlags.MountAsBackpack | ParachuteFlags.EndlessBladeRotation, 1.0f) } } },
-            {"cat_carpet", new Dictionary<string, (ParachuteFlags, float)> { { "models/props/de_dust/hr_dust/dust_cart/cart_carpet.vmdl", (ParachuteFlags.MountAsCarpet, 1.0f) } } },
-            {"airplane_small", new Dictionary<string, (ParachuteFlags, float)> { { "models/vehicles/airplane_small_01/airplane_small_01.vmdl", (ParachuteFlags.IsAirplane | ParachuteFlags.SetTeamColor, 0.3f) } } },
-            {"airplane_medium", new Dictionary<string, (ParachuteFlags, float)> { { "models/vehicles/airplane_medium_01/airplane_medium_01_landed.vmdl", (ParachuteFlags.IsAirplane | ParachuteFlags.SetTeamColor, 0.09f) } } },
-            {"taxi_city", new Dictionary<string, (ParachuteFlags, float)> { { "models/props_vehicles/taxi_city.vmdl", (ParachuteFlags.IsVehicle | ParachuteFlags.SetTeamColor, 0.3f) } } },
+            // {"ceiling_fan", new Dictionary<string, (ParachuteFlags, float)> { { "models/props/de_inferno/ceiling_fan_blade.vmdl", (ParachuteFlags.MountAsBackpack | ParachuteFlags.EndlessBladeRotation, 1.0f) } } },
+            // {"cat_carpet", new Dictionary<string, (ParachuteFlags, float)> { { "models/props/de_dust/hr_dust/dust_cart/cart_carpet.vmdl", (ParachuteFlags.MountAsCarpet, 1.0f) } } },
+            // {"airplane_small", new Dictionary<string, (ParachuteFlags, float)> { { "models/vehicles/airplane_small_01/airplane_small_01.vmdl", (ParachuteFlags.IsAirplane | ParachuteFlags.SetTeamColor, 0.3f) } } },
+            // {"airplane_medium", new Dictionary<string, (ParachuteFlags, float)> { { "models/vehicles/airplane_medium_01/airplane_medium_01_landed.vmdl", (ParachuteFlags.IsAirplane | ParachuteFlags.SetTeamColor, 0.09f) } } },
+            // {"taxi_city", new Dictionary<string, (ParachuteFlags, float)> { { "models/props_vehicles/taxi_city.vmdl", (ParachuteFlags.IsVehicle | ParachuteFlags.SetTeamColor, 0.3f) } } },
         };
 
         private bool _enabled = false;
@@ -87,39 +90,17 @@ namespace Parachute
             RemoveListener<Listeners.OnServerPrecacheResources>(OnServerPrecacheResources);
         }
 
-        private void LaunchParachute(CCSPlayerController player)
-        {
-            if (_parachutePlayers.ContainsKey(player.UserId ?? -1)) return;
-            _parachutePlayers.Add(player.UserId ?? -1, new Dictionary<string, string>());
-            // get random parachute
-            _parachutePlayers[player.UserId ?? -1]["type"] = _parachuteModels.ElementAt(Random.Shared.Next(_parachuteModels.Count)).Key;
-            _parachutePlayers[player.UserId ?? -1]["prop"] = SpawnProp(
-                player,
-                _parachuteModels[_parachutePlayers[player.UserId ?? -1]["type"]].Keys.First()
-            ).ToString();
-        }
-
-        private void RemoveParachute(int UserId)
-        {
-            if (!_parachutePlayers.ContainsKey(UserId)) return;
-            if (_parachutePlayers[UserId].ContainsKey("prop")) RemoveProp(int.Parse(_parachutePlayers[UserId]["prop"]));
-            _parachutePlayers.Remove(UserId);
-        }
-
         private void ResetParachutes()
         {
-            Dictionary<int, Dictionary<string, string>> _parachutePlayersCopy = new(_parachutePlayers);
-            foreach (int userid in _parachutePlayersCopy.Keys)
+            Dictionary<CCSPlayerController, Dictionary<string, string>> _parachutesCopy = new(_parachutes);
+            foreach (var kvp in _parachutesCopy)
             {
-                CCSPlayerController? player = Utilities.GetPlayerFromUserid(userid);
-                if (player == null
-                    || !player.IsValid
-                    || player.Pawn == null
-                    || !player.PlayerPawn.IsValid
-                    || player.Pawn.Value == null) continue;
-                RemoveParachute(player.UserId ?? -1);
+                if (kvp.Key == null
+                    || !kvp.Key.IsValid
+                    || !kvp.Value.ContainsKey("prop")) continue;
+                RemoveParachute(int.Parse(kvp.Value["prop"]));
             }
-            _parachutePlayers.Clear();
+            _parachutes.Clear();
         }
 
         private void ListenerOnTick()
@@ -144,37 +125,39 @@ namespace Parachute
                 // sanity checks
                 if (!_enabled
                 || player == null
-                || player.Pawn == null
-                || player.Pawn.Value == null
-                || player.PlayerPawn == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value == null
-                || player.IsBot) continue;
-                // pre-check
+                || !player.IsValid
+                || player.IsBot
+                || player.PlayerPawn == null
+                || !player.PlayerPawn.IsValid
+                || player.PlayerPawn.Value == null) continue;
+                // if the player does not use the parachute
                 if ((player.Buttons & PlayerButtons.Use) == 0
                     // if player is not alive
-                    || player.Pawn.Value.LifeState != (byte)LifeState_t.LIFE_ALIVE
+                    || player.PlayerPawn.Value.LifeState != (byte)LifeState_t.LIFE_ALIVE
                     // if player is not in the air
-                    || player.Pawn.Value.GroundEntity.Value != null
+                    || player.PlayerPawn.Value.GroundEntity.Value != null
                     // if player carries a hostage and this is not allowed due to configuration
                     || (Config.DisableWhenCarryingHostage && player.PlayerPawn.Value.HostageServices!.CarriedHostageProp.Value != null)
-                    || player.Pawn.Value.MoveType == MoveType_t.MOVETYPE_LADDER)
+                    || player.PlayerPawn.Value.MoveType == MoveType_t.MOVETYPE_LADDER)
                 {
-                    if (_parachutePlayers.ContainsKey(player.UserId ?? -1) && _parachutePlayers[player.UserId ?? -1].ContainsKey("prop"))
-                        RemoveProp(int.Parse(_parachutePlayers[player.UserId ?? -1]["prop"]), true);
-                    // stop interaction
-                    continue;
+                    // when player is not in the air, remove parachute
+                    if (!_parachutes.ContainsKey(player)) continue;
+                    if (_parachutes[player].ContainsKey("prop"))
+                        RemoveParachute(int.Parse(_parachutes[player]["prop"]));
+                    _parachutes.Remove(player);
                 }
-                // launch parachute
-                if (!_parachutePlayers.ContainsKey(player.UserId ?? -1)) LaunchParachute(player);
+                else if (!_parachutes.ContainsKey(player))
+                {
+                    _parachutes.Add(player, new Dictionary<string, string>{
+                        { "model", "standard"},
+                        { "prop", CreateParachute(player, "standard").ToString() }
+                    });
+                }
                 else
                 {
-                    Vector absVelocity = player.Pawn.Value.AbsVelocity;
-                    // Determine movement direction
+                    Vector absVelocity = player.PlayerPawn.Value.AbsVelocity;
+                    if (absVelocity.Z >= 0.0f) continue;
                     absVelocity.Z = -Config.FallSpeed;
-                    // Update prop every tick to ensure synchrony
-                    if (_parachutePlayers[player.UserId ?? -1].ContainsKey("prop"))
-                    {
-                        UpdateProp(player, int.Parse(_parachutePlayers[player.UserId ?? -1]["prop"]));
-                    }
                 }
             }
         }
@@ -197,7 +180,12 @@ namespace Parachute
 
         private HookResult EventOnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
         {
-            RemoveParachute(@event.Userid!.UserId ?? -1);
+            CCSPlayerController? player = @event.Userid;
+            if (player == null
+                || !player.IsValid
+                || !_parachutes.ContainsKey(player)
+                || !_parachutes[player].ContainsKey("prop")) return HookResult.Continue;
+            RemoveParachute(int.Parse(_parachutes[player]["prop"]));
             return HookResult.Continue;
         }
 

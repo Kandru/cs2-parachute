@@ -9,13 +9,8 @@ namespace Parachute
     public class PluginConfig : BasePluginConfig
     {
         [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
-        [JsonPropertyName("Lerp")] public float Lerp { get; set; } = 0.8f;
-        [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 20f;
-        [JsonPropertyName("MovementModifier")] public float MovementModifier { get; set; } = 9f;
-        [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 9f;
-        [JsonPropertyName("MaxVelocity")] public float MaxVelocity { get; set; } = 750f;
+        [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 0.1f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
-        [JsonPropertyName("EnableSounds")] public bool EnableSounds { get; set; } = true;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;
     }
 
@@ -47,14 +42,7 @@ namespace Parachute
             {"airplane_medium", new Dictionary<string, (ParachuteFlags, float)> { { "models/vehicles/airplane_medium_01/airplane_medium_01_landed.vmdl", (ParachuteFlags.IsAirplane | ParachuteFlags.SetTeamColor, 0.09f) } } },
             {"taxi_city", new Dictionary<string, (ParachuteFlags, float)> { { "models/props_vehicles/taxi_city.vmdl", (ParachuteFlags.IsVehicle | ParachuteFlags.SetTeamColor, 0.3f) } } },
         };
-        private readonly Dictionary<string, Dictionary<string, float>> _parachuteSounds = new()
-        {
-            {"standard", new Dictionary<string, float> { { "Weapon_Knife.Slash", 0.5f } } },
-            {"ceiling_fan", new Dictionary<string, float> { { "Weapon_Knife.Slash", 0.5f } } },
-            {"cat_carpet", new Dictionary<string, float> { { "Weapon_Knife.Slash", 0.5f } } },
-            {"airplane_small", new Dictionary<string, float> { { "Weapon_Knife.Slash", 0.5f } } },
-            {"taxi_city", new Dictionary<string, float> { { "Weapon_Knife.Slash", 0.5f } } },
-        };
+
         private bool _enabled = false;
         private int _enableAfterTime = 0;
 
@@ -71,8 +59,6 @@ namespace Parachute
                 _enabled = true;
                 Server.PrintToChatAll(Localizer["parachute.readyChat"]);
             }
-            // register sound events
-            InitializeEmitSound();
             // register event handler
             CreateEventHandler();
         }
@@ -111,13 +97,6 @@ namespace Parachute
                 player,
                 _parachuteModels[_parachutePlayers[player.UserId ?? -1]["type"]].Keys.First()
             ).ToString();
-            if (Config.EnableSounds && _parachuteSounds.ContainsKey(_parachutePlayers[player.UserId ?? -1]["type"]))
-            {
-                var soundEntry = _parachuteSounds[_parachutePlayers[player.UserId ?? -1]["type"]].ElementAt(Random.Shared.Next(_parachuteSounds[_parachutePlayers[player.UserId ?? -1]["type"]].Count));
-                _parachutePlayers[player.UserId ?? -1]["sound"] = soundEntry.Key;
-                _parachutePlayers[player.UserId ?? -1]["sound_time"] = soundEntry.Value.ToString();
-                _parachutePlayers[player.UserId ?? -1]["sound_next"] = "0";
-            }
         }
 
         private void RemoveParachute(int UserId)
@@ -179,7 +158,8 @@ namespace Parachute
                     || (Config.DisableWhenCarryingHostage && player.PlayerPawn.Value.HostageServices!.CarriedHostageProp.Value != null)
                     || player.Pawn.Value.MoveType == MoveType_t.MOVETYPE_LADDER)
                 {
-                    if (_parachutePlayers.ContainsKey(player.UserId ?? -1) && _parachutePlayers[player.UserId ?? -1].ContainsKey("prop")) RemoveProp(int.Parse(_parachutePlayers[player.UserId ?? -1]["prop"]), true);
+                    if (_parachutePlayers.ContainsKey(player.UserId ?? -1) && _parachutePlayers[player.UserId ?? -1].ContainsKey("prop"))
+                        RemoveProp(int.Parse(_parachutePlayers[player.UserId ?? -1]["prop"]), true);
                     // stop interaction
                     continue;
                 }
@@ -187,57 +167,13 @@ namespace Parachute
                 if (!_parachutePlayers.ContainsKey(player.UserId ?? -1)) LaunchParachute(player);
                 else
                 {
-                    Vector velocity = player.Pawn.Value.AbsVelocity;
-                    float speed = MathF.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y);
-                    float eyeAngle = player.Pawn.Value.V_angle.Y;
-                    float movementAngle = MathF.Atan2(velocity.Y, velocity.X) * 180 / MathF.PI;
+                    Vector absVelocity = player.Pawn.Value.AbsVelocity;
                     // Determine movement direction
-                    bool moveForward = (player.Buttons & PlayerButtons.Forward) != 0;
-                    bool moveBack = (player.Buttons & PlayerButtons.Back) != 0;
-                    bool moveLeft = (player.Buttons & PlayerButtons.Moveleft) != 0;
-                    bool moveRight = (player.Buttons & PlayerButtons.Moveright) != 0;
-                    // Adjust yaw and speed based on movement direction
-                    if (moveForward && !moveBack) { speed += Config.MovementModifier; }
-                    if (moveBack && !moveForward) { eyeAngle += 180; speed += Config.MovementModifier; }
-                    if (moveLeft && !moveRight) { eyeAngle += moveBack ? -25 : moveForward ? 25 : 90; speed += Config.SideMovementModifier; }
-                    if (moveRight && !moveLeft) { eyeAngle += moveBack ? 25 : moveForward ? -25 : -90; speed += Config.SideMovementModifier; }
-                    // use movementAngle if no movement keys are pressed
-                    if (!moveForward && !moveBack && !moveLeft && !moveRight ||
-                        moveForward && moveBack || moveLeft && moveRight)
-                    {
-                        eyeAngle = movementAngle;
-                    }
-                    else
-                    {
-                        // Normalize the angle to be within -180 to 180
-                        eyeAngle = (eyeAngle + 180) % 360 - 180;
-                    }
-                    // Convert yaw to radians
-                    float radians = eyeAngle * (MathF.PI / 180);
-                    // Calculate target velocity
-                    float targetX = MathF.Cos(radians) * speed;
-                    float targetY = MathF.Sin(radians) * speed;
-                    // Apply lerp for smooth movement
-                    float speedFactor = 1.0f - (speed / Config.MaxVelocity);
-                    targetX = MathLerp(velocity.X, targetX, Config.Lerp * speedFactor);
-                    targetY = MathLerp(velocity.Y, targetY, Config.Lerp * speedFactor);
-                    velocity.Z = MathF.Max(velocity.Z, -Config.FallSpeed);
-                    // Clamp velocity to max limits
-                    velocity.X = Math.Clamp(targetX, -Config.MaxVelocity, Config.MaxVelocity);
-                    velocity.Y = Math.Clamp(targetY, -Config.MaxVelocity, Config.MaxVelocity);
+                    absVelocity.Z = -Config.FallSpeed;
                     // Update prop every tick to ensure synchrony
                     if (_parachutePlayers[player.UserId ?? -1].ContainsKey("prop"))
                     {
                         UpdateProp(player, int.Parse(_parachutePlayers[player.UserId ?? -1]["prop"]));
-                    }
-                    // emit sound if any
-                    if (_parachutePlayers[player.UserId ?? -1].ContainsKey("sound"))
-                    {
-                        if (Server.CurrentTime >= float.Parse(_parachutePlayers[player.UserId ?? -1]["sound_next"]))
-                        {
-                            EmitSound(player, _parachutePlayers[player.UserId ?? -1]["sound"]);
-                            _parachutePlayers[player.UserId ?? -1]["sound_next"] = (Server.CurrentTime + float.Parse(_parachutePlayers[player.UserId ?? -1]["sound_time"])).ToString();
-                        }
                     }
                 }
             }

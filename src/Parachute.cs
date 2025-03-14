@@ -86,6 +86,10 @@ namespace Parachute
         {
             RemoveListener<Listeners.OnTick>(ListenerOnTick);
             RemoveListener<Listeners.OnServerPrecacheResources>(OnServerPrecacheResources);
+            DeregisterEventHandler<EventRoundStart>(EventOnRoundStart);
+            DeregisterEventHandler<EventRoundFreezeEnd>(EventOnRoundFreezeEnd);
+            DeregisterEventHandler<EventPlayerDeath>(EventOnPlayerDeath);
+            DeregisterEventHandler<EventRoundEnd>(EventOnRoundEnd);
         }
 
         private void ResetParachutes()
@@ -104,11 +108,7 @@ namespace Parachute
         private void ListenerOnTick()
         {
             // remove listener if not enabled to save resources
-            if (!_enabled && _enableAfterTime == 0)
-            {
-                RemoveListener<Listeners.OnTick>(ListenerOnTick);
-                return;
-            }
+            if (!_enabled) return;
             // enable after delay
             if (!_enabled && _enableAfterTime > 0 && (int)Server.CurrentTime >= _enableAfterTime)
             {

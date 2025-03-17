@@ -33,7 +33,7 @@ namespace Parachute
         public PluginConfig Config { get; set; } = null!;
         public void OnConfigParsed(PluginConfig config) { Config = config; }
 
-        private Dictionary<CCSPlayerController, Dictionary<string, string>> _parachutes = new();
+        private Dictionary<CCSPlayerController, CDynamicProp?> _parachutes = [];
         private readonly Dictionary<string, Dictionary<string, (ParachuteFlags, float)>> _parachuteModels = new()
         {
             {"standard", new Dictionary<string, (ParachuteFlags, float)> { { "models/props_survival/parachute/chute.vmdl", (ParachuteFlags.SetTeamColor, 1.0f) } } },
@@ -94,13 +94,10 @@ namespace Parachute
 
         private void ResetParachutes()
         {
-            Dictionary<CCSPlayerController, Dictionary<string, string>> _parachutesCopy = new(_parachutes);
+            Dictionary<CCSPlayerController, CDynamicProp?> _parachutesCopy = new(_parachutes);
             foreach (var kvp in _parachutesCopy)
             {
-                if (kvp.Key == null
-                    || !kvp.Key.IsValid
-                    || !kvp.Value.ContainsKey("prop")) continue;
-                RemoveParachute(int.Parse(kvp.Value["prop"]));
+                RemoveParachute(kvp.Value);
             }
             _parachutes.Clear();
         }
@@ -145,16 +142,12 @@ namespace Parachute
                     {
                         // when player is not in the air, remove parachute
                         if (!_parachutes.ContainsKey(player)) continue;
-                        if (_parachutes[player].ContainsKey("prop"))
-                            RemoveParachute(int.Parse(_parachutes[player]["prop"]));
+                        RemoveParachute(_parachutes[player]);
                         _parachutes.Remove(player);
                     }
                     else if (!_parachutes.ContainsKey(player))
                     {
-                        _parachutes.Add(player, new Dictionary<string, string>{
-                            { "model", "standard"},
-                            { "prop", CreateParachute(player, "standard").ToString() }
-                        });
+                        _parachutes.Add(player, CreateParachute(player, "standard"));
                     }
                     else
                     {
@@ -186,9 +179,8 @@ namespace Parachute
             CCSPlayerController? player = @event.Userid;
             if (player == null
                 || !player.IsValid
-                || !_parachutes.ContainsKey(player)
-                || !_parachutes[player].ContainsKey("prop")) return HookResult.Continue;
-            RemoveParachute(int.Parse(_parachutes[player]["prop"]));
+                || !_parachutes.ContainsKey(player)) return HookResult.Continue;
+            RemoveParachute(_parachutes[player]);
             return HookResult.Continue;
         }
 

@@ -15,16 +15,6 @@ namespace Parachute
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;
     }
 
-    public enum ParachuteFlags : byte
-    {
-        SetTeamColor = 1,
-        MountAsBackpack = 2,
-        EndlessBladeRotation = 4,
-        MountAsCarpet = 8,
-        IsAirplane = 16,
-        IsVehicle = 32,
-    }
-
     public partial class Parachute : BasePlugin, IPluginConfig<PluginConfig>
     {
         public override string ModuleName => "CS2 Parachute";
@@ -34,16 +24,6 @@ namespace Parachute
         public void OnConfigParsed(PluginConfig config) { Config = config; }
 
         private Dictionary<CCSPlayerController, CDynamicProp?> _parachutes = [];
-        private readonly Dictionary<string, Dictionary<string, (ParachuteFlags, float)>> _parachuteModels = new()
-        {
-            {"standard", new Dictionary<string, (ParachuteFlags, float)> { { "models/props_survival/parachute/chute.vmdl", (ParachuteFlags.SetTeamColor, 1.0f) } } },
-            // {"ceiling_fan", new Dictionary<string, (ParachuteFlags, float)> { { "models/props/de_inferno/ceiling_fan_blade.vmdl", (ParachuteFlags.MountAsBackpack | ParachuteFlags.EndlessBladeRotation, 1.0f) } } },
-            // {"cat_carpet", new Dictionary<string, (ParachuteFlags, float)> { { "models/props/de_dust/hr_dust/dust_cart/cart_carpet.vmdl", (ParachuteFlags.MountAsCarpet, 1.0f) } } },
-            // {"airplane_small", new Dictionary<string, (ParachuteFlags, float)> { { "models/vehicles/airplane_small_01/airplane_small_01.vmdl", (ParachuteFlags.IsAirplane | ParachuteFlags.SetTeamColor, 0.3f) } } },
-            // {"airplane_medium", new Dictionary<string, (ParachuteFlags, float)> { { "models/vehicles/airplane_medium_01/airplane_medium_01_landed.vmdl", (ParachuteFlags.IsAirplane | ParachuteFlags.SetTeamColor, 0.09f) } } },
-            // {"taxi_city", new Dictionary<string, (ParachuteFlags, float)> { { "models/props_vehicles/taxi_city.vmdl", (ParachuteFlags.IsVehicle | ParachuteFlags.SetTeamColor, 0.3f) } } },
-        };
-
         private bool _enabled = false;
         private int _enableAfterTime = 0;
 
@@ -147,7 +127,7 @@ namespace Parachute
                     }
                     else if (!_parachutes.ContainsKey(player))
                     {
-                        _parachutes.Add(player, CreateParachute(player, "standard"));
+                        _parachutes.Add(player, CreateParachute(player));
                     }
                     else
                     {

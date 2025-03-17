@@ -7,6 +7,7 @@ namespace Parachute
     {
         private readonly List<string> _precacheModels = new List<string>
         {
+            "models/props_survival/parachute/chute.vmdl"
         };
 
         private void OnServerPrecacheResources(ResourceManifest manifest)
@@ -15,14 +16,6 @@ namespace Parachute
             foreach (var model in _precacheModels)
             {
                 manifest.AddResource(model);
-            }
-            // add _parachuteModels to precache
-            foreach (var parachuteModel in _parachuteModels)
-            {
-                foreach (var model in parachuteModel.Value)
-                {
-                    manifest.AddResource(model.Key);
-                }
             }
         }
     }

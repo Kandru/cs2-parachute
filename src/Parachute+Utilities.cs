@@ -8,11 +8,10 @@ namespace Parachute
 {
     public partial class Parachute : BasePlugin
     {
-        private CDynamicProp? CreateParachute(CCSPlayerController player, string model, float scale = 1.0f)
+        private static CDynamicProp? CreateParachute(CCSPlayerController player)
         {
             // sanity checks
-            if (!_parachuteModels.ContainsKey(model)
-            || player == null
+            if (player == null
             || player.Pawn == null
             || !player.Pawn.IsValid
             || player.Pawn.Value == null
@@ -29,27 +28,22 @@ namespace Parachute
             // spawn it
             prop.DispatchSpawn();
             // set model
-            prop.SetModel(_parachuteModels[model].Keys.First());
+            prop.SetModel("models/props_survival/parachute/chute.vmdl");
             // follow player
             prop.AcceptInput("FollowEntity", player.Pawn.Value, player.Pawn.Value, "!activator");
-            // set scale
-            prop.CBodyComponent!.SceneNode!.Scale = _parachuteModels[model].Values.First().Item2;
-            // get parachute flags
-            ParachuteFlags parachuteFlags = _parachuteModels[model].Values.First().Item1;
-            // FLAG: SetTeamColor
-            if ((parachuteFlags & ParachuteFlags.SetTeamColor) != 0)
-                if (player.Team == CsTeam.Terrorist)
-                {
-                    prop.Render = Color.FromArgb(255, Random.Shared.Next(100, 256), 0, 0);
-                }
-                else if (player.Team == CsTeam.CounterTerrorist)
-                {
-                    prop.Render = Color.FromArgb(255, 0, 0, Random.Shared.Next(100, 256));
-                }
+            // SetTeamColor
+            if (player.Team == CsTeam.Terrorist)
+            {
+                prop.Render = Color.FromArgb(255, Random.Shared.Next(100, 256), 0, 0);
+            }
+            else if (player.Team == CsTeam.CounterTerrorist)
+            {
+                prop.Render = Color.FromArgb(255, 0, 0, Random.Shared.Next(100, 256));
+            }
             return prop;
         }
 
-        private void RemoveParachute(CDynamicProp? prop)
+        private static void RemoveParachute(CDynamicProp? prop)
         {
             if (prop == null
                 || !prop.IsValid) return;

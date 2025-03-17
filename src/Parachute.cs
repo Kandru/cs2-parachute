@@ -58,6 +58,7 @@ namespace Parachute
             if (hotReload)
             {
                 _enabled = true;
+                RegisterListener<Listeners.OnTick>(ListenerOnTick);
                 Server.PrintToChatAll(Localizer["parachute.readyChat"]);
             }
             // register event handler
@@ -74,7 +75,6 @@ namespace Parachute
 
         private void CreateEventHandler()
         {
-            RegisterListener<Listeners.OnTick>(ListenerOnTick);
             RegisterListener<Listeners.OnServerPrecacheResources>(OnServerPrecacheResources);
             RegisterEventHandler<EventRoundStart>(EventOnRoundStart);
             RegisterEventHandler<EventRoundFreezeEnd>(EventOnRoundFreezeEnd);
@@ -108,7 +108,11 @@ namespace Parachute
         private void ListenerOnTick()
         {
             // remove listener if not enabled to save resources
-            if (!_enabled) return;
+            if (!_enabled && _enableAfterTime == 0)
+            {
+                RemoveListener<Listeners.OnTick>(ListenerOnTick);
+                return;
+            }
             // enable after delay
             if (!_enabled && _enableAfterTime > 0 && (int)Server.CurrentTime >= _enableAfterTime)
             {
@@ -118,46 +122,47 @@ namespace Parachute
                 Utilities.GetPlayers().ForEach(player => player.PrintToCenter(Localizer["parachute.readyCenter"]));
             }
             // worker
-            foreach (var player in Utilities.GetPlayers())
-            {
-                // sanity checks
-                if (!_enabled
-                || player == null
-                || !player.IsValid
-                || player.IsBot
-                || player.PlayerPawn == null
-                || !player.PlayerPawn.IsValid
-                || player.PlayerPawn.Value == null) continue;
-                // if the player does not use the parachute
-                if ((player.Buttons & PlayerButtons.Use) == 0
-                    // if player is not alive
-                    || player.PlayerPawn.Value.LifeState != (byte)LifeState_t.LIFE_ALIVE
-                    // if player is not in the air
-                    || player.PlayerPawn.Value.GroundEntity.Value != null
-                    // if player carries a hostage and this is not allowed due to configuration
-                    || (Config.DisableWhenCarryingHostage && player.PlayerPawn.Value.HostageServices!.CarriedHostageProp.Value != null)
-                    || player.PlayerPawn.Value.MoveType == MoveType_t.MOVETYPE_LADDER)
+            if (_enabled)
+                foreach (var player in Utilities.GetPlayers())
                 {
-                    // when player is not in the air, remove parachute
-                    if (!_parachutes.ContainsKey(player)) continue;
-                    if (_parachutes[player].ContainsKey("prop"))
-                        RemoveParachute(int.Parse(_parachutes[player]["prop"]));
-                    _parachutes.Remove(player);
+                    // sanity checks
+                    if (!_enabled
+                    || player == null
+                    || !player.IsValid
+                    || player.IsBot
+                    || player.PlayerPawn == null
+                    || !player.PlayerPawn.IsValid
+                    || player.PlayerPawn.Value == null) continue;
+                    // if the player does not use the parachute
+                    if ((player.Buttons & PlayerButtons.Use) == 0
+                        // if player is not alive
+                        || player.PlayerPawn.Value.LifeState != (byte)LifeState_t.LIFE_ALIVE
+                        // if player is not in the air
+                        || player.PlayerPawn.Value.GroundEntity.Value != null
+                        // if player carries a hostage and this is not allowed due to configuration
+                        || (Config.DisableWhenCarryingHostage && player.PlayerPawn.Value.HostageServices!.CarriedHostageProp.Value != null)
+                        || player.PlayerPawn.Value.MoveType == MoveType_t.MOVETYPE_LADDER)
+                    {
+                        // when player is not in the air, remove parachute
+                        if (!_parachutes.ContainsKey(player)) continue;
+                        if (_parachutes[player].ContainsKey("prop"))
+                            RemoveParachute(int.Parse(_parachutes[player]["prop"]));
+                        _parachutes.Remove(player);
+                    }
+                    else if (!_parachutes.ContainsKey(player))
+                    {
+                        _parachutes.Add(player, new Dictionary<string, string>{
+                            { "model", "standard"},
+                            { "prop", CreateParachute(player, "standard").ToString() }
+                        });
+                    }
+                    else
+                    {
+                        Vector absVelocity = player.PlayerPawn.Value.AbsVelocity;
+                        if (absVelocity.Z >= 0.0f) continue;
+                        absVelocity.Z = -Config.FallSpeed;
+                    }
                 }
-                else if (!_parachutes.ContainsKey(player))
-                {
-                    _parachutes.Add(player, new Dictionary<string, string>{
-                        { "model", "standard"},
-                        { "prop", CreateParachute(player, "standard").ToString() }
-                    });
-                }
-                else
-                {
-                    Vector absVelocity = player.PlayerPawn.Value.AbsVelocity;
-                    if (absVelocity.Z >= 0.0f) continue;
-                    absVelocity.Z = -Config.FallSpeed;
-                }
-            }
         }
 
         private HookResult EventOnRoundStart(EventRoundStart @event, GameEventInfo info)

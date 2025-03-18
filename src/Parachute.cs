@@ -92,24 +92,23 @@ namespace Parachute
         {
             // only run if parachute is enabled
             if (_state < ParachuteState.Enabled) return;
-            foreach (var player in Utilities.GetPlayers())
+            foreach (var player in Utilities.GetPlayers()
+                .Where(player => player.IsValid
+                        && !player.IsBot
+                    && player.PlayerPawn != null
+                    && player.PlayerPawn.IsValid
+                    && player.PlayerPawn.Value != null))
             {
-                // sanity checks
-                if (player == null
-                || !player.IsValid
-                || player.IsBot
-                || player.PlayerPawn == null
-                || !player.PlayerPawn.IsValid
-                || player.PlayerPawn.Value == null) continue;
                 // if the player does not use the parachute
                 if ((player.Buttons & PlayerButtons.Use) == 0
                     // if player is not alive
-                    || player.PlayerPawn.Value.LifeState != (byte)LifeState_t.LIFE_ALIVE
+                    || player.PlayerPawn.Value!.LifeState != (byte)LifeState_t.LIFE_ALIVE
                     // if player is not in the air
-                    || player.PlayerPawn.Value.GroundEntity.Value != null
+                    || player.PlayerPawn.Value!.GroundEntity.Value != null
                     // if player carries a hostage and this is not allowed due to configuration
                     || (Config.DisableWhenCarryingHostage && player.PlayerPawn.Value.HostageServices!.CarriedHostageProp.Value != null)
-                    || player.PlayerPawn.Value.MoveType == MoveType_t.MOVETYPE_LADDER)
+                    // if player is using a ladder
+                    || player.PlayerPawn.Value!.MoveType == MoveType_t.MOVETYPE_LADDER)
                 {
                     // when player is not in the air, remove parachute
                     if (!_parachutes.ContainsKey(player)) continue;
@@ -179,7 +178,10 @@ namespace Parachute
             if (_state != ParachuteState.Timer) return;
             _state = ParachuteState.Enabled;
             Server.PrintToChatAll(Localizer["parachute.readyChat"]);
-            Utilities.GetPlayers().ForEach(player => player.PrintToCenter(Localizer["parachute.readyCenter"]));
+            Utilities.GetPlayers()
+                .Where(player => player.IsValid && !player.IsBot && !player.IsHLTV)
+                .ToList()
+                .ForEach(player => player.PrintToCenter(Localizer["parachute.readyCenter"]));
         }
     }
 }

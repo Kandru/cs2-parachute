@@ -130,6 +130,7 @@ namespace Parachute
 
         private HookResult EventOnRoundStart(EventRoundStart @event, GameEventInfo info)
         {
+            // reset parachute on round start
             _state = ParachuteState.Disabled;
             ResetParachutes();
             return HookResult.Continue;
@@ -166,7 +167,7 @@ namespace Parachute
 
         private HookResult EventOnRoundEnd(EventRoundEnd @event, GameEventInfo info)
         {
-            // check if we should disable the parachute on round end
+            // check if we should reset the parachute on round end
             if (!Config.DisableOnRoundEnd) return HookResult.Continue;
             _state = ParachuteState.Disabled;
             ResetParachutes();

@@ -7,7 +7,7 @@ namespace Parachute
     {
         private readonly List<string> _precacheModels = new List<string>
         {
-            "models/props_survival/parachute/chute.vmdl"
+            //"models/props_survival/parachute/chute.vmdl"
         };
 
         private void OnServerPrecacheResources(ResourceManifest manifest)

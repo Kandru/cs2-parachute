@@ -83,7 +83,7 @@ namespace Parachute
             Dictionary<CCSPlayerController, CDynamicProp?> _parachutesCopy = new(_parachutes);
             foreach (var kvp in _parachutesCopy)
             {
-                RemoveParachute(kvp.Value);
+                //RemoveParachute(kvp.Value);
             }
             _parachutes.Clear();
         }
@@ -112,12 +112,12 @@ namespace Parachute
                 {
                     // when player is not in the air, remove parachute
                     if (!_parachutes.ContainsKey(player)) continue;
-                    RemoveParachute(_parachutes[player]);
+                    //RemoveParachute(_parachutes[player]);
                     _parachutes.Remove(player);
                 }
                 else if (!_parachutes.ContainsKey(player))
                 {
-                    _parachutes.Add(player, CreateParachute(player));
+                    _parachutes.Add(player, null);
                 }
                 else
                 {
@@ -161,7 +161,7 @@ namespace Parachute
             if (player == null
                 || !player.IsValid
                 || !_parachutes.ContainsKey(player)) return HookResult.Continue;
-            RemoveParachute(_parachutes[player]);
+            //RemoveParachute(_parachutes[player]);
             return HookResult.Continue;
         }
 

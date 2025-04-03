@@ -64,7 +64,11 @@ Whether or not do disable the parachute if a player carries a hostage.
 
 ### ParachuteModel
 
-The original parachute model is gone from CS2 since the last update. Therefore specify a custom model or live without one.
+The original parachute model is gone from CS2 since the last update. Therefore specify a custom model or live without one. Empty for no model.
+
+### ParachuteSound
+
+Sound of the parachute itself. Must be a name provided via the soundevents_addon.vsndevts file. Empty for no sound.
 
 ### EnableTeamColors
 

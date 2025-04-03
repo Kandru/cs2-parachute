@@ -12,6 +12,7 @@ namespace Parachute
         public override string ModuleAuthor => "Originally by Franc1sco Franug / rewritten by Jon-Mailes Graeffe <mail@jonni.it> and Kalle <kalle@kandru.de>";
 
         private Dictionary<CCSPlayerController, CDynamicProp?> _parachutes = [];
+        private Dictionary<CCSPlayerController, long> _parachuteSounds = [];
         private ParachuteState _state = ParachuteState.Disabled;
 
         public override void Load(bool hotReload)
@@ -69,6 +70,7 @@ namespace Parachute
                 RemoveParachute(kvp.Value);
             }
             _parachutes.Clear();
+            _parachuteSounds.Clear();
         }
 
         private void ListenerOnTick()
@@ -97,16 +99,27 @@ namespace Parachute
                     if (!_parachutes.ContainsKey(player)) continue;
                     RemoveParachute(_parachutes[player]);
                     _parachutes.Remove(player);
+                    _parachuteSounds.Remove(player);
                 }
                 else if (!_parachutes.ContainsKey(player))
                 {
                     _parachutes.Add(player, CreateParachute(player));
+                    _parachuteSounds.Add(player, 0L);
                 }
                 else
                 {
                     Vector absVelocity = player.PlayerPawn.Value.AbsVelocity;
                     if (absVelocity.Z >= 0.0f) continue;
                     absVelocity.Z = -Config.FallSpeed;
+                    // play sound if enabled
+                    if (Config.ParachuteSound != ""
+                        && _parachutes[player] != null
+                        && _parachutes[player]!.IsValid
+                        && _parachuteSounds[player] <= (DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond))
+                    {
+                        _parachutes[player]!.EmitSound(Config.ParachuteSound);
+                        _parachuteSounds[player] = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond + (long)((Config.ParachuteSoundInterval) * 1000L);
+                    }
                 }
             }
         }

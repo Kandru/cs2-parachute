@@ -121,6 +121,7 @@ namespace Parachute
 
         private HookResult EventOnRoundFreezeEnd(EventRoundFreezeEnd @event, GameEventInfo info)
         {
+            if (!Config.Enabled) return HookResult.Continue;
             // check if we should enable the parachute instantly or after a delay
             _state = ParachuteState.Timer;
             if (Config.RoundStartDelay > 0)

@@ -1,4 +1,8 @@
 {
+    "admin.unknown_command": "[Fallschirm] Unbekannter Befehl.",
+    "admin.reload:": "[Fallschirm] Konfiguration neu geladen.",
+    "admin.disable": "[Fallschirm] Fallschirm deaktiviert.",
+    "admin.enable": "[Fallschirm] Fallschirm aktiviert.",
     "parachute.loaded": "[Fallschirm] Plugin geladen!",
     "parachute.unloaded": "[Fallschirm] Plugin entladen!",
     "parachute.disabled": "[Fallschirm] Plugin deaktiviert!",

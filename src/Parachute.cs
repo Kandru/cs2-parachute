@@ -2,40 +2,22 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
 using System.Globalization;
-using System.Text.Json.Serialization;
+
 
 namespace Parachute
 {
-    public class PluginConfig : BasePluginConfig
-    {
-        [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
-        [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 0.1f;
-        [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
-        [JsonPropertyName("DisableOnRoundEnd")] public bool DisableOnRoundEnd { get; set; } = false;
-        [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;
-    }
-
-    public enum ParachuteState
-    {
-        Disabled,
-        Timer,
-        Enabled
-    }
-
     public partial class Parachute : BasePlugin, IPluginConfig<PluginConfig>
     {
         public override string ModuleName => "CS2 Parachute";
         public override string ModuleAuthor => "Originally by Franc1sco Franug / rewritten by Jon-Mailes Graeffe <mail@jonni.it> and Kalle <kalle@kandru.de>";
-
-        public PluginConfig Config { get; set; } = null!;
-        public void OnConfigParsed(PluginConfig config) { Config = config; }
 
         private Dictionary<CCSPlayerController, CDynamicProp?> _parachutes = [];
         private ParachuteState _state = ParachuteState.Disabled;
 
         public override void Load(bool hotReload)
         {
-            Console.WriteLine(Localizer["parachute.loaded"]);
+            // precache model if any
+            if (Config.ParachuteModel != "") _precacheModels.Add(Config.ParachuteModel);
             if (!Config.Enabled)
             {
                 Console.WriteLine(Localizer["parachute.disabled"]);
@@ -48,6 +30,7 @@ namespace Parachute
             }
             // register event handler
             CreateEventHandler();
+            Console.WriteLine(Localizer["parachute.loaded"]);
         }
 
         public override void Unload(bool hotReload)
@@ -83,7 +66,7 @@ namespace Parachute
             Dictionary<CCSPlayerController, CDynamicProp?> _parachutesCopy = new(_parachutes);
             foreach (var kvp in _parachutesCopy)
             {
-                //RemoveParachute(kvp.Value);
+                RemoveParachute(kvp.Value);
             }
             _parachutes.Clear();
         }
@@ -112,12 +95,12 @@ namespace Parachute
                 {
                     // when player is not in the air, remove parachute
                     if (!_parachutes.ContainsKey(player)) continue;
-                    //RemoveParachute(_parachutes[player]);
+                    RemoveParachute(_parachutes[player]);
                     _parachutes.Remove(player);
                 }
                 else if (!_parachutes.ContainsKey(player))
                 {
-                    _parachutes.Add(player, null);
+                    _parachutes.Add(player, CreateParachute(player));
                 }
                 else
                 {
@@ -161,7 +144,7 @@ namespace Parachute
             if (player == null
                 || !player.IsValid
                 || !_parachutes.ContainsKey(player)) return HookResult.Continue;
-            //RemoveParachute(_parachutes[player]);
+            RemoveParachute(_parachutes[player]);
             return HookResult.Continue;
         }
 

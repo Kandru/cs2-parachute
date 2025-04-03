@@ -5,10 +5,7 @@ namespace Parachute
 {
     public partial class Parachute : BasePlugin
     {
-        private readonly List<string> _precacheModels = new List<string>
-        {
-            //"models/props_survival/parachute/chute.vmdl"
-        };
+        private List<string> _precacheModels = [];
 
         private void OnServerPrecacheResources(ResourceManifest manifest)
         {

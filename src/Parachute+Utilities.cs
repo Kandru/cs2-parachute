@@ -8,7 +8,7 @@ namespace Parachute
 {
     public partial class Parachute : BasePlugin
     {
-        private static CDynamicProp? CreateParachute(CCSPlayerController player)
+        private CDynamicProp? CreateParachute(CCSPlayerController player)
         {
             // sanity checks
             if (player == null
@@ -28,18 +28,19 @@ namespace Parachute
             // spawn it
             prop.DispatchSpawn();
             // set model
-            prop.SetModel("models/props_survival/parachute/chute.vmdl");
+            prop.SetModel("models/cs2/kandru/hoverboard.vmdl");
             // follow player
             prop.AcceptInput("FollowEntity", player.Pawn.Value, player.Pawn.Value, "!activator");
             // SetTeamColor
-            if (player.Team == CsTeam.Terrorist)
-            {
-                prop.Render = Color.FromArgb(255, Random.Shared.Next(100, 256), 0, 0);
-            }
-            else if (player.Team == CsTeam.CounterTerrorist)
-            {
-                prop.Render = Color.FromArgb(255, 0, 0, Random.Shared.Next(100, 256));
-            }
+            if (Config.EnableTeamColors)
+                if (player.Team == CsTeam.Terrorist)
+                {
+                    prop.Render = Color.FromArgb(255, Random.Shared.Next(100, 256), 0, 0);
+                }
+                else if (player.Team == CsTeam.CounterTerrorist)
+                {
+                    prop.Render = Color.FromArgb(255, 0, 0, Random.Shared.Next(100, 256));
+                }
             return prop;
         }
 

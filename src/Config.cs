@@ -9,6 +9,7 @@ namespace Parachute
     {
         [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
         [JsonPropertyName("FallSpeed")] public float FallSpeed { get; set; } = 0.1f;
+        [JsonPropertyName("SideMovementModifier")] public float SideMovementModifier { get; set; } = 1.0075f;
         [JsonPropertyName("RoundStartDelay")] public int RoundStartDelay { get; set; } = 10;
         [JsonPropertyName("DisableOnRoundEnd")] public bool DisableOnRoundEnd { get; set; } = false;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;

@@ -110,7 +110,14 @@ namespace Parachute
                 {
                     Vector absVelocity = player.PlayerPawn.Value.AbsVelocity;
                     if (absVelocity.Z >= 0.0f) continue;
+                    // set fallspeed
                     absVelocity.Z = -Config.FallSpeed;
+                    // add horizontal velocity (+1) to player
+                    if ((player.Buttons & PlayerButtons.Moveleft) != 0 || (player.Buttons & PlayerButtons.Moveright) != 0)
+                    {
+                        absVelocity.X *= Config.SideMovementModifier;
+                        absVelocity.Y *= Config.SideMovementModifier;
+                    }
                     // play sound if enabled
                     if (Config.ParachuteSound != ""
                         && _parachutes[player] != null

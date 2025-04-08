@@ -2,5 +2,5 @@ namespace Parachute;
 
 public partial class Parachute
 {
-    public override string ModuleVersion => "1.8.18";
+    public override string ModuleVersion => "1.8.19";
 }

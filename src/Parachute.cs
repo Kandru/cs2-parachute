@@ -109,9 +109,34 @@ namespace Parachute
                 else
                 {
                     Vector absVelocity = player.PlayerPawn.Value.AbsVelocity;
-                    if (absVelocity.Z >= 0.0f) continue;
-                    // set fallspeed
-                    absVelocity.Z = -Config.FallSpeed;
+                    // if it is a parachute apply falldamage
+                    if (!Config.IsHoverboard)
+                    {
+                        if (absVelocity.Z >= 0.0f) continue;
+                        // set fallspeed
+                        absVelocity.Z = -Config.FallSpeed;
+                    }
+                    else
+                    {
+                        // check if player is looking up
+                        if (player.PlayerPawn.Value.V_angle.X < 0.0f)
+                        {
+                            // set fallspeed upwards
+                            absVelocity.Z *= Config.HoverboardMovementModifier;
+                        }
+                        else if (player.PlayerPawn.Value.V_angle.X > 0.0f)
+                        {
+
+                            // set fallspeed downwards
+                            absVelocity.Z = -Config.HoverboardMovementModifier;
+                        }
+                        else
+                        {
+                            // set fallspeed to 0
+                            absVelocity.Z = 0.0f;
+                        }
+                    }
+
                     // add horizontal velocity (+1) to player
                     if ((player.Buttons & PlayerButtons.Moveleft) != 0 || (player.Buttons & PlayerButtons.Moveright) != 0)
                     {

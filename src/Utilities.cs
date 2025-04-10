@@ -28,7 +28,7 @@ namespace Parachute
             // spawn it
             prop.DispatchSpawn();
             // set model
-            prop.SetModel("models/cs2/kandru/hoverboard.vmdl");
+            prop.SetModel(Config.ParachuteModel);
             // set scale
             prop.CBodyComponent!.SceneNode!.Scale = Config.ParachuteModelSize;
             // follow player

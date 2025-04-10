@@ -29,6 +29,8 @@ namespace Parachute
             prop.DispatchSpawn();
             // set model
             prop.SetModel("models/cs2/kandru/hoverboard.vmdl");
+            // set scale
+            prop.CBodyComponent!.SceneNode!.Scale = Config.ParachuteModelSize;
             // follow player
             prop.AcceptInput("FollowEntity", player.Pawn.Value, player.Pawn.Value, "!activator");
             // SetTeamColor

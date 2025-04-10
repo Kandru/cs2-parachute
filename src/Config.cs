@@ -16,6 +16,7 @@ namespace Parachute
         [JsonPropertyName("DisableOnRoundEnd")] public bool DisableOnRoundEnd { get; set; } = false;
         [JsonPropertyName("DisableWhenCarryingHostage")] public bool DisableWhenCarryingHostage { get; set; } = true;
         [JsonPropertyName("ParachuteModel")] public string ParachuteModel { get; set; } = "models/cs2/kandru/hoverboard.vmdl";
+        [JsonPropertyName("ParachuteModelSize")] public float ParachuteModelSize { get; set; } = 1f;
         [JsonPropertyName("ParachuteSound")] public string ParachuteSound { get; set; } = "Kandru.Hoverboard";
         [JsonPropertyName("ParachuteSoundInterval")] public float ParachuteSoundInterval { get; set; } = 1.266f;
         [JsonPropertyName("EnableTeamColors")] public bool EnableTeamColors { get; set; } = false;

@@ -1,6 +1,6 @@
 {
     "admin.unknown_command": "[Parachute] Unknown command.",
-    "admin.reload:": "[Parachute] Reloaded Configuration.",
+    "admin.reload": "[Parachute] Reloaded Configuration.",
     "admin.disable": "[Parachute] Disabled Parachute.",
     "admin.enable": "[Parachute] Enabled Parachute.",
     "parachute.loaded": "[Parachute] plugin loaded!",

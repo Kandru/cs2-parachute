@@ -80,20 +80,20 @@ namespace Parachute
             foreach (var player in Utilities.GetPlayers()
                 .Where(player => player.IsValid
                         && !player.IsBot
-                    && player.PlayerPawn != null
-                    && player.PlayerPawn.IsValid
-                    && player.PlayerPawn.Value != null))
+                    && player.Pawn != null
+                    && player.Pawn.IsValid
+                    && player.Pawn.Value != null))
             {
                 // if the player does not use the parachute
                 if ((player.Buttons & PlayerButtons.Use) == 0
                     // if player is not alive
-                    || player.PlayerPawn.Value!.LifeState != (byte)LifeState_t.LIFE_ALIVE
+                    || player.Pawn.Value!.LifeState != (byte)LifeState_t.LIFE_ALIVE
                     // if player is not in the air
-                    || player.PlayerPawn.Value!.GroundEntity.Value != null
+                    || player.Pawn.Value!.GroundEntity.Value != null
                     // if player carries a hostage and this is not allowed due to configuration
-                    || (Config.DisableWhenCarryingHostage && player.PlayerPawn.Value.HostageServices!.CarriedHostageProp.Value != null)
+                    //|| (Config.DisableWhenCarryingHostage && player.Pawn.Value.pawn!.CarriedHostageProp.Value != null)
                     // if player is using a ladder
-                    || player.PlayerPawn.Value!.MoveType == MoveType_t.MOVETYPE_LADDER)
+                    || player.Pawn.Value!.MoveType == MoveType_t.MOVETYPE_LADDER)
                 {
                     // when player is not in the air, remove parachute
                     if (!_parachutes.ContainsKey(player)) continue;
@@ -108,7 +108,7 @@ namespace Parachute
                 }
                 else
                 {
-                    Vector absVelocity = player.PlayerPawn.Value.AbsVelocity;
+                    Vector absVelocity = player.Pawn.Value.AbsVelocity;
                     // if it is a parachute apply falldamage
                     if (!Config.IsHoverboard)
                     {
@@ -119,12 +119,12 @@ namespace Parachute
                     else
                     {
                         // check if player is looking up
-                        if (player.PlayerPawn.Value.V_angle.X < 0.0f)
+                        if (player.Pawn.Value.V_angle.X < 0.0f)
                         {
                             // set fallspeed upwards
                             absVelocity.Z *= Config.HoverboardMovementModifier;
                         }
-                        else if (player.PlayerPawn.Value.V_angle.X > 0.0f)
+                        else if (player.Pawn.Value.V_angle.X > 0.0f)
                         {
 
                             // set fallspeed downwards

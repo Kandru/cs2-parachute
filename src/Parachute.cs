@@ -90,8 +90,13 @@ namespace Parachute
                     || player.Pawn.Value!.LifeState != (byte)LifeState_t.LIFE_ALIVE
                     // if player is not in the air
                     || player.Pawn.Value!.GroundEntity.Value != null
-                    // if player carries a hostage and this is not allowed due to configuration
-                    //|| (Config.DisableWhenCarryingHostage && player.Pawn.Value.pawn!.CarriedHostageProp.Value != null)
+                    // if player carries a hostage and this is not allowed (may not work when player is using a bot)
+                    || (Config.DisableWhenCarryingHostage
+                        && player.PlayerPawn != null
+                        && player.PlayerPawn.IsValid
+                        && player.PlayerPawn.Value != null
+                        && player.PlayerPawn.Value.HostageServices != null
+                        && player.PlayerPawn.Value.HostageServices.CarriedHostageProp.Value != null)
                     // if player is using a ladder
                     || player.Pawn.Value!.MoveType == MoveType_t.MOVETYPE_LADDER)
                 {

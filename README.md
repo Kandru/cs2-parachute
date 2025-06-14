@@ -19,7 +19,7 @@ The Parachute Plugin for CounterstrikeSharp allows players to deploy parachutes 
 ## Installation
 
 1. Download and extract the latest release from the [GitHub releases page](https://github.com/Kandru/cs2-parachute/releases/).
-2. Move the "Parachute" folder to the `/addons/counterstrikesharp/configs/plugins/` directory.
+2. Move the "Parachute" folder to the `/addons/counterstrikesharp/plugins/` directory.
 3. Restart the server.
 
 Updating is even easier: simply overwrite all plugin files and they will be reloaded automatically. To automate updates please use our [CS2 Update Manager](https://github.com/Kandru/cs2-update-manager/).

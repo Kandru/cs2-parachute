@@ -1,6 +1,8 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
+using Parachute.Enums;
+using Parachute.Classes;
 using Parachute.Utils;
 using System.Globalization;
 
@@ -12,8 +14,7 @@ namespace Parachute
         public override string ModuleName => "CS2 Parachute";
         public override string ModuleAuthor => "Originally by Franc1sco Franug / rewritten by Jon-Mailes Graeffe <mail@jonni.it> and Kalle <kalle@kandru.de>";
 
-        private readonly Dictionary<CCSPlayerController, CDynamicProp?> _parachutes = [];
-        private readonly Dictionary<CCSPlayerController, long> _parachuteSounds = [];
+        private readonly Dictionary<CCSPlayerController, PlayerData> _playerData = [];
         private ParachuteState _state = ParachuteState.Disabled;
 
         public override void Load(bool hotReload)
@@ -29,6 +30,8 @@ namespace Parachute
                 Console.WriteLine(Localizer["parachute.disabled"]);
                 return;
             }
+            // create all listeners and register events
+            CreateListener();
             // check if hot reloaded
             if (hotReload)
             {
@@ -36,25 +39,20 @@ namespace Parachute
                 {
                     AddPlayerToList(player);
                 }
-                _state = ParachuteState.Enabled;
-                Server.PrintToChatAll(Localizer["parachute.readyChat"]);
+                EnableParachutes();
             }
-            // create all listeners and register events
-            CreateListener();
             Console.WriteLine(Localizer["parachute.loaded"]);
         }
 
         public override void Unload(bool hotReload)
         {
-            _state = ParachuteState.Disabled;
+            DisableParachutes(true);
             RemoveListener();
-            ResetParachutes(true);
             Console.WriteLine(Localizer["parachute.unloaded"]);
         }
 
         private void CreateListener()
         {
-            RegisterListener<Listeners.OnTick>(ListenerOnTick);
             RegisterListener<Listeners.OnServerPrecacheResources>(OnServerPrecacheResources);
             RegisterListener<Listeners.OnMapStart>(OnMapStart);
             RegisterListener<Listeners.OnMapEnd>(OnMapEnd);
@@ -68,7 +66,6 @@ namespace Parachute
 
         private void RemoveListener()
         {
-            RemoveListener<Listeners.OnTick>(ListenerOnTick);
             RemoveListener<Listeners.OnServerPrecacheResources>(OnServerPrecacheResources);
             RemoveListener<Listeners.OnMapStart>(OnMapStart);
             RemoveListener<Listeners.OnMapEnd>(OnMapEnd);
@@ -80,109 +77,115 @@ namespace Parachute
             DeregisterEventHandler<EventRoundEnd>(EventOnRoundEnd);
         }
 
-        private void ResetParachutes(bool force = false)
+        private void DisableParachutes(bool force = false)
         {
-            Dictionary<CCSPlayerController, CDynamicProp?> _parachutesCopy = new(_parachutes);
-            foreach (KeyValuePair<CCSPlayerController, CDynamicProp?> kvp in _parachutesCopy)
+            _state = ParachuteState.Disabled;
+            RemoveListener<Listeners.OnTick>(ListenerOnTick);
+            foreach (PlayerData data in _playerData.Values)
             {
-                Prop.RemoveParachute(kvp.Value);
-                _parachutes[kvp.Key] = null;
+                if (data.Parachute != null)
+                {
+                    Prop.RemoveParachute(data.Parachute);
+                    data.Parachute = null;
+                    data.NextSoundTime = 0;
+                }
             }
-            _parachuteSounds.Clear();
+
             if (force)
             {
-                _parachutes.Clear();
+                _playerData.Clear();
             }
         }
 
-        private void ListenerOnTick()
+        private void EnableParachutes()
         {
-            // only run if parachute is enabled
-            if (_state < ParachuteState.Enabled)
+            if (_state != ParachuteState.Disabled || !Config.Enabled)
             {
                 return;
             }
 
-            foreach (var kvp in _parachutes)
-            {
-                // if the player does not use the parachute
-                if ((kvp.Key.Buttons & PlayerButtons.Use) == 0
-                    // if player is not alive
-                    || kvp.Key.Pawn.Value!.LifeState != (byte)LifeState_t.LIFE_ALIVE
-                    // if player is not in the air
-                    || kvp.Key.Pawn.Value!.GroundEntity.Value != null
-                    // if player carries a hostage and this is not allowed (may not work when player is using a bot)
-                    || (Config.DisableWhenCarryingHostage
-                        && kvp.Key.PlayerPawn != null
-                        && kvp.Key.PlayerPawn.IsValid
-                        && kvp.Key.PlayerPawn.Value != null
-                        && kvp.Key.PlayerPawn.Value.HostageServices != null
-                        && kvp.Key.PlayerPawn.Value.HostageServices.CarriedHostageProp.Value != null)
-                    // if player is using a ladder
-                    || kvp.Key.Pawn.Value!.MoveType == MoveType_t.MOVETYPE_LADDER)
-                {
-                    // when player is not in the air, remove parachute
-                    if (_parachutes[kvp.Key] == null)
-                    {
-                        continue;
-                    }
+            _state = ParachuteState.Enabled;
+            RegisterListener<Listeners.OnTick>(ListenerOnTick);
+            Server.PrintToChatAll(Localizer["parachute.readyChat"]);
+            Utilities.GetPlayers()
+                .Where(player => player.IsValid && !player.IsBot && !player.IsHLTV)
+                .ToList()
+                .ForEach(player => player.PrintToCenter(Localizer["parachute.readyCenter"]));
+        }
 
-                    Prop.RemoveParachute(_parachutes[kvp.Key]);
-                    _ = _parachuteSounds.Remove(kvp.Key);
-                }
-                else if (!_parachutes.ContainsKey(kvp.Key))
+        private void ListenerOnTick()
+        {
+            foreach (KeyValuePair<CCSPlayerController, PlayerData> kvp in _playerData)
+            {
+                CCSPlayerController player = kvp.Key;
+                PlayerData data = kvp.Value;
+                CBasePlayerPawn? pawn = player.Pawn.Value;
+
+                if (pawn == null)
                 {
-                    _parachutes[kvp.Key] = Prop.CreateParachute(Config, kvp.Key);
-                    _parachuteSounds.Add(kvp.Key, 0L);
+                    // Clean up if pawn is invalid
+                    if (data.Parachute != null)
+                    {
+                        Prop.RemoveParachute(data.Parachute);
+                        data.Parachute = null;
+                    }
+                    continue;
                 }
-                else
+
+                bool shouldHave = (player.Buttons & PlayerButtons.Use) != 0 &&
+                                pawn.LifeState == (byte)LifeState_t.LIFE_ALIVE &&
+                                pawn.GroundEntity.Value == null &&
+                                pawn.MoveType != MoveType_t.MOVETYPE_LADDER &&
+                                (!Config.DisableWhenCarryingHostage ||
+                                 player.PlayerPawn?.Value?.HostageServices?.CarriedHostageProp.Value == null);
+
+                bool hasParachute = data.Parachute != null;
+
+                if (hasParachute && !shouldHave)
                 {
-                    Vector absVelocity = kvp.Key.Pawn.Value.AbsVelocity;
-                    // if it is a parachute apply falldamage
+                    Prop.RemoveParachute(data.Parachute);
+                    data.Parachute = null;
+                    data.NextSoundTime = 0;
+                }
+                else if (!hasParachute && shouldHave)
+                {
+                    data.Parachute = Prop.CreateParachute(Config, player);
+                    data.NextSoundTime = 0;
+                }
+                else if (hasParachute && shouldHave)
+                {
+                    Vector velocity = pawn.AbsVelocity;
+
                     if (!Config.IsHoverboard)
                     {
-                        if (absVelocity.Z >= 0.0f)
+                        if (velocity.Z < 0.0f)
                         {
-                            continue;
+                            velocity.Z = -Config.FallSpeed;
                         }
-                        // set fallspeed
-                        absVelocity.Z = -Config.FallSpeed;
                     }
                     else
                     {
-                        // check if player is looking up
-                        if (kvp.Key.Pawn.Value.V_angle.X < 0.0f)
-                        {
-                            // set fallspeed upwards
-                            absVelocity.Z *= Config.HoverboardMovementModifier;
-                        }
-                        else if (kvp.Key.Pawn.Value.V_angle.X > 0.0f)
-                        {
-
-                            // set fallspeed downwards
-                            absVelocity.Z = -Config.HoverboardMovementModifier;
-                        }
-                        else
-                        {
-                            // set fallspeed to 0
-                            absVelocity.Z = 0.0f;
-                        }
+                        float viewAngleX = pawn.V_angle.X;
+                        velocity.Z = viewAngleX < 0.0f ? velocity.Z * Config.HoverboardMovementModifier :
+                                    viewAngleX > 0.0f ? -Config.HoverboardMovementModifier : 0.0f;
                     }
 
-                    // add horizontal velocity (+1) to player
-                    if ((kvp.Key.Buttons & PlayerButtons.Moveleft) != 0 || (kvp.Key.Buttons & PlayerButtons.Moveright) != 0)
+                    // Side movement
+                    if ((player.Buttons & (PlayerButtons.Moveleft | PlayerButtons.Moveright)) != 0)
                     {
-                        absVelocity.X *= Config.SideMovementModifier;
-                        absVelocity.Y *= Config.SideMovementModifier;
+                        velocity.X *= Config.SideMovementModifier;
+                        velocity.Y *= Config.SideMovementModifier;
                     }
-                    // play sound if enabled
-                    if (Config.ParachuteSound != ""
-                        && _parachutes[kvp.Key] != null
-                        && _parachutes[kvp.Key]!.IsValid
-                        && _parachuteSounds[kvp.Key] <= (DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond))
+
+                    // Sound handling
+                    if (!string.IsNullOrEmpty(Config.ParachuteSound) && data.Parachute?.IsValid == true)
                     {
-                        _ = _parachutes[kvp.Key]!.EmitSound(Config.ParachuteSound);
-                        _parachuteSounds[kvp.Key] = (DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond) + (long)(Config.ParachuteSoundInterval * 1000L);
+                        long currentTime = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+                        if (data.NextSoundTime <= currentTime)
+                        {
+                            _ = data.Parachute.EmitSound(Config.ParachuteSound);
+                            data.NextSoundTime = currentTime + (long)(Config.ParachuteSoundInterval * 1000L);
+                        }
                     }
                 }
             }
@@ -190,12 +193,12 @@ namespace Parachute
 
         private void OnMapStart(string mapName)
         {
-            ResetParachutes(true);
+            DisableParachutes(true);
         }
 
         private void OnMapEnd()
         {
-            ResetParachutes(true);
+            DisableParachutes(true);
         }
 
         private HookResult OnPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
@@ -208,21 +211,16 @@ namespace Parachute
         private HookResult OnPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
         {
             CCSPlayerController? player = @event.Userid;
-            if (player == null
-                || !player.IsValid
-                || !_parachutes.ContainsKey(player))
+            if (player?.IsValid == true)
             {
-                return HookResult.Continue;
+                _ = _playerData.Remove(player);
             }
-            _ = _parachutes.Remove(player);
             return HookResult.Continue;
         }
 
         private HookResult EventOnRoundStart(EventRoundStart @event, GameEventInfo info)
         {
-            // reset parachute on round start
-            _state = ParachuteState.Disabled;
-            ResetParachutes();
+            DisableParachutes();
             return HookResult.Continue;
         }
 
@@ -232,8 +230,6 @@ namespace Parachute
             {
                 return HookResult.Continue;
             }
-            // check if we should enable the parachute instantly or after a delay
-            _state = ParachuteState.Timer;
             if (Config.RoundStartDelay > 0)
             {
                 Server.PrintToChatAll(
@@ -250,58 +246,36 @@ namespace Parachute
 
         private HookResult EventOnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
         {
-            // remove player from list when he dies
             CCSPlayerController? player = @event.Userid;
-            if (player == null
-                || !player.IsValid
-                || !_parachutes.TryGetValue(player, out CDynamicProp? value))
+            if (player?.IsValid == true && _playerData.TryGetValue(player, out PlayerData? data))
             {
-                return HookResult.Continue;
+                if (data.Parachute != null)
+                {
+                    Prop.RemoveParachute(data.Parachute);
+                    data.Parachute = null;
+                    data.NextSoundTime = 0;
+                }
             }
-
-            Prop.RemoveParachute(value);
             return HookResult.Continue;
         }
 
         private HookResult EventOnRoundEnd(EventRoundEnd @event, GameEventInfo info)
         {
-            // check if we should reset the parachute on round end
             if (!Config.DisableOnRoundEnd)
             {
                 return HookResult.Continue;
             }
 
-            _state = ParachuteState.Disabled;
-            ResetParachutes();
+            DisableParachutes();
             return HookResult.Continue;
         }
 
         private void AddPlayerToList(CCSPlayerController? player)
         {
-            if (player == null
-                || !player.IsValid
-                || player.IsBot
-                || _parachutes.ContainsKey(player))
+            if (player?.IsValid == true && !player.IsBot && !_playerData.ContainsKey(player))
             {
-                return;
+                _playerData.Add(player, new PlayerData());
             }
-            Console.WriteLine($"Adding player {player.PlayerName} to parachute list.");
-            _parachutes.Add(player, null);
-        }
-
-        private void EnableParachutes()
-        {
-            if (_state != ParachuteState.Timer)
-            {
-                return;
-            }
-
-            _state = ParachuteState.Enabled;
-            Server.PrintToChatAll(Localizer["parachute.readyChat"]);
-            Utilities.GetPlayers()
-                .Where(player => player.IsValid && !player.IsBot && !player.IsHLTV)
-                .ToList()
-                .ForEach(player => player.PrintToCenter(Localizer["parachute.readyCenter"]));
         }
     }
 }

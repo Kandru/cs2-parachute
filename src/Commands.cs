@@ -12,7 +12,7 @@ namespace Parachute
         public void CommandMapVote(CCSPlayerController player, CommandInfo command)
         {
             string subCommand = command.GetArg(1);
-            switch (subCommand.ToLower())
+            switch (subCommand.ToLowerInvariant())
             {
                 case "reload":
                     Config.Reload();
@@ -20,6 +20,7 @@ namespace Parachute
                     break;
                 case "disable":
                     Config.Enabled = false;
+                    DisableParachutes(true);
                     Config.Update();
                     command.ReplyToCommand(Localizer["admin.disable"]);
                     break;

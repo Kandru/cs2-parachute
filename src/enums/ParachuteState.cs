@@ -1,9 +1,8 @@
-namespace Parachute
+namespace Parachute.Enums
 {
     public enum ParachuteState
     {
         Disabled,
-        Timer,
         Enabled
     }
 }

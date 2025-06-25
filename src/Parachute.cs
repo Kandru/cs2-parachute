@@ -1,6 +1,7 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
+using Parachute.Utils;
 using System.Globalization;
 
 
@@ -18,7 +19,11 @@ namespace Parachute
         public override void Load(bool hotReload)
         {
             // precache model if any
-            if (Config.ParachuteModel != "") _precacheModels.Add(Config.ParachuteModel);
+            if (Config.ParachuteModel != "")
+            {
+                _precacheModels.Add(Config.ParachuteModel);
+            }
+
             if (!Config.Enabled)
             {
                 Console.WriteLine(Localizer["parachute.disabled"]);
@@ -67,7 +72,7 @@ namespace Parachute
             Dictionary<CCSPlayerController, CDynamicProp?> _parachutesCopy = new(_parachutes);
             foreach (var kvp in _parachutesCopy)
             {
-                RemoveParachute(kvp.Value);
+                Prop.RemoveParachute(kvp.Value);
             }
             _parachutes.Clear();
             _parachuteSounds.Clear();
@@ -76,7 +81,11 @@ namespace Parachute
         private void ListenerOnTick()
         {
             // only run if parachute is enabled
-            if (_state < ParachuteState.Enabled) return;
+            if (_state < ParachuteState.Enabled)
+            {
+                return;
+            }
+
             foreach (var player in Utilities.GetPlayers()
                 .Where(player => player.IsValid
                         && !player.IsBot
@@ -101,14 +110,18 @@ namespace Parachute
                     || player.Pawn.Value!.MoveType == MoveType_t.MOVETYPE_LADDER)
                 {
                     // when player is not in the air, remove parachute
-                    if (!_parachutes.ContainsKey(player)) continue;
-                    RemoveParachute(_parachutes[player]);
+                    if (!_parachutes.ContainsKey(player))
+                    {
+                        continue;
+                    }
+
+                    Prop.RemoveParachute(_parachutes[player]);
                     _parachutes.Remove(player);
                     _parachuteSounds.Remove(player);
                 }
                 else if (!_parachutes.ContainsKey(player))
                 {
-                    _parachutes.Add(player, CreateParachute(player));
+                    _parachutes.Add(player, Prop.CreateParachute(Config, player));
                     _parachuteSounds.Add(player, 0L);
                 }
                 else
@@ -117,7 +130,10 @@ namespace Parachute
                     // if it is a parachute apply falldamage
                     if (!Config.IsHoverboard)
                     {
-                        if (absVelocity.Z >= 0.0f) continue;
+                        if (absVelocity.Z >= 0.0f)
+                        {
+                            continue;
+                        }
                         // set fallspeed
                         absVelocity.Z = -Config.FallSpeed;
                     }
@@ -171,7 +187,10 @@ namespace Parachute
 
         private HookResult EventOnRoundFreezeEnd(EventRoundFreezeEnd @event, GameEventInfo info)
         {
-            if (!Config.Enabled) return HookResult.Continue;
+            if (!Config.Enabled)
+            {
+                return HookResult.Continue;
+            }
             // check if we should enable the parachute instantly or after a delay
             _state = ParachuteState.Timer;
             if (Config.RoundStartDelay > 0)
@@ -194,15 +213,23 @@ namespace Parachute
             CCSPlayerController? player = @event.Userid;
             if (player == null
                 || !player.IsValid
-                || !_parachutes.ContainsKey(player)) return HookResult.Continue;
-            RemoveParachute(_parachutes[player]);
+                || !_parachutes.ContainsKey(player))
+            {
+                return HookResult.Continue;
+            }
+
+            Prop.RemoveParachute(_parachutes[player]);
             return HookResult.Continue;
         }
 
         private HookResult EventOnRoundEnd(EventRoundEnd @event, GameEventInfo info)
         {
             // check if we should reset the parachute on round end
-            if (!Config.DisableOnRoundEnd) return HookResult.Continue;
+            if (!Config.DisableOnRoundEnd)
+            {
+                return HookResult.Continue;
+            }
+
             _state = ParachuteState.Disabled;
             ResetParachutes();
             return HookResult.Continue;
@@ -210,7 +237,11 @@ namespace Parachute
 
         private void EnableParachutes()
         {
-            if (_state != ParachuteState.Timer) return;
+            if (_state != ParachuteState.Timer)
+            {
+                return;
+            }
+
             _state = ParachuteState.Enabled;
             Server.PrintToChatAll(Localizer["parachute.readyChat"]);
             Utilities.GetPlayers()

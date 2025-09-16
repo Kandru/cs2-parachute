@@ -31,13 +31,21 @@ This plugin automatically creates a readable JSON configuration file. This confi
 
 ```json
 {
-  "Enabled": true,
-  "FallSpeed": 20,
-  "RoundStartDelay": 10,
-  "DisableOnRoundEnd": false,
-  "DisableWhenCarryingHostage": true,
-  "ParachuteModel": "",
-  "EnableTeamColors": false,
+  "enabled": true,
+  "round_start_delay": 10,
+  "disable_on_round_end": false,
+  "disable_when_carrying_hostage": true,
+  "parachute": {
+    "is_hoverboard": false,
+    "fallspeed": 0.1,
+    "sidewards_movement_modifier": 1.0075,
+    "hoverboard_movement_modifier": 1.0075,
+    "parachute_model": "models/cs2/kandru/hoverboard.vmdl",
+    "parachute_model_size": 1,
+    "parachute_sound": "Kandru.Hoverboard",
+    "parachute_sound_interval": 1.266,
+    "enable_team_colors": false
+  },
   "ConfigVersion": 1
 }
 ```
@@ -46,31 +54,47 @@ This plugin automatically creates a readable JSON configuration file. This confi
 
 Wether or not the parachute is enabled globally.
 
-### FallSpeed
-
-The speed the player falls when using the parachute.
-
-### RoundStartDelay
+#### round_start_delay
 
 Delay after the round starts before the parachute can be used.
 
-### DisableOnRoundEnd
+#### disable_on_round_end
 
 Whether or not to disable the parachute after the round ended.
 
-### DisableWhenCarryingHostage
+#### disable_when_carrying_hostage
 
 Whether or not do disable the parachute if a player carries a hostage.
 
-### ParachuteModel
+### Parachute
+
+Settings regarding the parachute.
+
+#### fallspeed
+
+The speed the player falls when using the parachute.
+
+#### sidewards_movement_modifier
+
+The sidewards speed increasement modifier.
+
+#### hoverboard_movement_modifier
+
+The sidewards speed increasement modifier if hoverboard.
+
+#### parachute_model
 
 The original parachute model is gone from CS2 since the last update. Therefore specify a custom model or live without one. Empty for no model.
 
-### ParachuteSound
+#### parachute_model_size
+
+The size of the parachute.
+
+#### parachute_sound
 
 Sound of the parachute itself. Must be a name provided via the soundevents_addon.vsndevts file. Empty for no sound.
 
-### EnableTeamColors
+#### parachute_sound_interval
 
 Whether or not the model should have team colors applied.
 

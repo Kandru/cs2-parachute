@@ -6,15 +6,14 @@
 [![issues - cs2-map-modifier](https://img.shields.io/github/issues/Kandru/cs2-parachute)](https://github.com/Kandru/cs2-parachute/issues)
 [![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=C2AVYKGVP9TRG)
 
-The Parachute Plugin for CounterstrikeSharp allows players to deploy parachutes during gameplay, adding a new dynamic to the game. This plugin enhances the gaming experience by providing players with more mobility and strategic options while being very customizable.
+The Parachute Plugin for CounterstrikeSharp brings some fun to your CS2 matches by letting players glide around with parachutes! This playful modification adds a silly twist to the game, giving everyone more ways to move around the map and create funny moments.
 
-## Key Features
+## What Makes It Fun
 
-- **Easy Usage**: Players can deploy parachutes by pressing the Use-Button (defaults to E).
-- **Customizable Settings**: Server admins can configure parachute behavior, including fall speed.
-- **Compatibility**: Works seamlessly with other CounterstrikeSharp plugins.
-- **Lightweight**: Minimal impact on server performance.
-- **Open Source**: Fully open-source and available on GitHub for community contributions.
+- **Simple Controls**: Just hold the Use button (usually E) while falling to deploy your parachute
+- **Adjustable Fun**: Server owners can tweak how fast you fall, how much you can steer, and other settings
+- **Sound Effects**: Add custom sounds to make your parachuting experience even more entertaining
+- **No Performance Issues**: Lightweight design means the fun doesn't slow down your server
 
 ## Installation
 

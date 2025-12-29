@@ -24,10 +24,6 @@ namespace Parachute.Utils
                 return null;
             }
 
-            // Set attributes in logical order (most important first)
-            prop.SetModel(Config.Parachute.ParachuteModel);
-            prop.CBodyComponent!.SceneNode!.Scale = Config.Parachute.ParachuteModelSize;
-
             // Configure collision and movement
             prop.MoveType = MoveType_t.MOVETYPE_NOCLIP;
             prop.Collision.SolidType = SolidType_t.SOLID_NONE;
@@ -36,6 +32,10 @@ namespace Parachute.Utils
 
             // spawn it
             prop.DispatchSpawn();
+
+            // Set attributes in logical order (most important first)
+            prop.SetModel(Config.Parachute.ParachuteModel);
+            prop.CBodyComponent!.SceneNode!.Scale = Config.Parachute.ParachuteModelSize;
 
             // follow player
             prop.AcceptInput("FollowEntity", pawn, pawn, "!activator");
